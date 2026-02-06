@@ -7,12 +7,10 @@ use actix_web::web;
 use log::error;
 use supabase_auth::models::UpdatedUser;
 
-#[utoipa::path(post, path = "/register")]
 pub async fn register(
     body: web::Json<RegisterPayload>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
-    // TODO: handle errors properly
     match state
         .auth_client
         .sign_up_with_email_and_password(&body.email, &body.password, None)
@@ -26,11 +24,6 @@ pub async fn register(
     }
 }
 
-#[utoipa::path(
-    post,
-    path = "/login",
-    request_body = LoginPayload,
-)]
 pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) -> HttpResponse {
     let session = match state
         .auth_client

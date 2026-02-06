@@ -1,3 +1,6 @@
+use supabase_auth::models::AuthClient;
+use supabase_rs::SupabaseClient;
+
 #[derive(Clone)]
 pub struct AppState {
     // Key: project id; Value: live state

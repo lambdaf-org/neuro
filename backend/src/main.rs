@@ -20,6 +20,7 @@ pub mod routes;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().ok();
     let address = setup_address();
     info!("Running at http://{}:{}", address.0, address.1);
 
@@ -65,7 +66,7 @@ async fn init_app_state() -> AppState {
 fn init_supabase_db_client() -> SupabaseClient {
     supabase_rs::SupabaseClient::new(
         env::var("SUPABASE_URL").expect("Could not find SUPABASE_URL"),
-        env::var("SUPABASE_API_KEY").expect("Could not find SUPABASE_ANON_KEY"),
+        env::var("SUPABASE_API_KEY").expect("Could not find SUPABASE_API_KEY"),
     )
     .expect("Failed initializing Supabase client")
 }
