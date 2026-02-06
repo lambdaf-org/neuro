@@ -12,6 +12,7 @@ pub struct LoginPayload {
 #[derive(Deserialize, ToSchema)]
 pub struct RegisterPayload {
     pub email: String,
+    pub username: String,
     pub password: String,
 }
 
