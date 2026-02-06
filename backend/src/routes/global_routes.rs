@@ -33,7 +33,7 @@ async fn auth_filter(
     let maybe_token = req
         .headers()
         .get("Authorization")
-        .map(|x| x.to_str().unwrap().to_string())
+        .and_then(|x| x.to_str().ok().map(|s| s.to_string()))
         .or_else(|| {
             req.query_string()
                 .split('&')
