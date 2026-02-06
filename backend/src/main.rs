@@ -72,8 +72,6 @@ fn init_supabase_db_client() -> SupabaseClient {
 }
 
 fn init_auth_client() -> AuthClient {
-    dotenv().ok();
-
     let url = env::var("SUPABASE_URL").expect("Undefined env: SUPABASE_URL");
     let api_key = env::var("SUPABASE_API_KEY").expect("Undefined env: SUPABASE_API_KEY");
     let anon_key = env::var("SUPABASE_ANON_KEY").expect("Undefined env: SUPABASE_ANON_KEY");
