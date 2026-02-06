@@ -9,7 +9,7 @@ use uuid::Uuid;
 
 pub async fn validate_jwt(token: Option<String>) -> Result<Uuid, Box<dyn std::error::Error>> {
     // 1. Initialize the JWKS cache with your Supabase URL
-    let supabase_url = env::var("SUPABASE_URL").expect("Could not find SPABASE_URL env");
+    let supabase_url = env::var("SUPABASE_URL").expect("Could not find SUPABASE_URL env");
     let jwks_url = format!("{supabase_url}/auth/v1/.well-known/jwks.json");
     let jwks_cache = JwksCache::new(jwks_url.as_str());
 
