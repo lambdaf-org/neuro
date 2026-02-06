@@ -1,0 +1,12 @@
+# Environment Variables
+.env
+.env.local
+.env.production
+
+# Rust Backend
+backend/target/
+backend/Cargo.lock
+
+# OS Files
+.DS_Store
+Thumbs.db
