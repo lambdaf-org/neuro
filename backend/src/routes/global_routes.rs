@@ -1,0 +1,55 @@
+use crate::config::middleware;
+use crate::handlers::user_handler::login;
+use crate::handlers::user_handler::register;
+use crate::models::user::MiddlewareData;
+use actix_web::HttpMessage;
+use actix_web::body::MessageBody;
+use actix_web::dev::ServiceRequest;
+use actix_web::dev::ServiceResponse;
+use actix_web::error::ErrorUnauthorized;
+use actix_web::middleware::Next;
+use actix_web::middleware::from_fn;
+use actix_web::web;
+use log::error;
+
+// Routes starting with "/api", which also are protected by the middleware
+pub fn init_api_scope(cfg: &mut web::ServiceConfig) {
+    cfg.service(web::scope("/api").wrap(from_fn(auth_filter)));
+}
+
+// Unprotected routes
+pub fn init_anon_scope(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("")
+            .route("/register", web::post().to(register))
+            .route("/login", web::post().to(login)),
+    );
+}
+
+async fn auth_filter(
+    req: ServiceRequest,
+    next: Next<impl MessageBody>,
+) -> Result<ServiceResponse<impl MessageBody>, actix_web::Error> {
+    let maybe_token = req
+        .headers()
+        .get("Authorization")
+        .map(|x| x.to_str().unwrap().to_string())
+        .or_else(|| {
+            req.query_string()
+                .split('&')
+                .find_map(|p| p.strip_prefix("token="))
+                .map(|s| format!("Bearer {}", s))
+        });
+
+    match middleware::validate_jwt(maybe_token).await {
+        Ok(user_id) => {
+            // Insert the user_id from the JWT-Token into ReqData
+            req.extensions_mut().insert(MiddlewareData { user_id });
+            next.call(req).await
+        }
+        Err(e) => {
+            error!("Authorization failed: {e}");
+            Err(ErrorUnauthorized("Authorization failed."))
+        }
+    }
+}
