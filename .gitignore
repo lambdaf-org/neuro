@@ -1,11 +1,17 @@
-# Environment Variables
+# Environment Variables (global)
 .env
-.env.local
-.env.production
+.env.*
 
-# Rust Backend
-backend/target/
-backend/Cargo.lock
+# Editor & IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
 # OS Files
 .DS_Store

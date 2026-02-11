@@ -1,0 +1,62 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Segoe UI Variable", "Segoe UI", sans-serif;
+}
+
+:root {
+  --ui-radius: 0.625rem;
+  --ui-container: 76rem;
+
+  --ui-primary: #3b82f6;
+  --ui-secondary: #8b5cf6;
+  --ui-success: #10b981;
+  --ui-warning: #f59e0b;
+
+  --ui-bg: #f8fafc;
+  --ui-bg-muted: #f1f5f9;
+  --ui-bg-elevated: #ffffff;
+  --ui-bg-accented: #e2e8f0;
+
+  --ui-border: #dbe2ea;
+  --ui-border-muted: #cfd8e3;
+  --ui-border-accented: #94a3b8;
+
+  --ui-text-dimmed: #64748b;
+  --ui-text-muted: #475569;
+  --ui-text-toned: #334155;
+  --ui-text: #1e293b;
+  --ui-text-highlighted: #0f172a;
+  --ui-text-inverted: #f8fafc;
+}
+
+.dark {
+  --ui-primary: #06b6d4;
+  --ui-secondary: #a78bfa;
+  --ui-success: #34d399;
+  --ui-warning: #fbbf24;
+
+  --ui-bg: #0f172a;
+  --ui-bg-muted: #111c31;
+  --ui-bg-elevated: #1e293b;
+  --ui-bg-accented: #334155;
+
+  --ui-border: #334155;
+  --ui-border-muted: #475569;
+  --ui-border-accented: #64748b;
+
+  --ui-text-dimmed: #94a3b8;
+  --ui-text-muted: #cbd5e1;
+  --ui-text-toned: #e2e8f0;
+  --ui-text: #f1f5f9;
+  --ui-text-highlighted: #ffffff;
+  --ui-text-inverted: #0f172a;
+}
+
+body {
+  min-height: 100svh;
+  background-image:
+    radial-gradient(circle at 0% 0%, color-mix(in oklab, var(--ui-primary) 14%, transparent), transparent 45%),
+    radial-gradient(circle at 100% 100%, color-mix(in oklab, var(--ui-secondary) 14%, transparent), transparent 45%);
+}
