@@ -2,7 +2,6 @@ const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/backend').replace(/
 
 export interface LoginPayload {
   email: string
-  username: string
   password: string
 }
 

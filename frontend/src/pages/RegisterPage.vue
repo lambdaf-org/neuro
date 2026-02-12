@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
 import { ApiError, register } from '@/lib/auth-api'
 
@@ -22,42 +21,39 @@ const state = reactive<RegisterFormState>({
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 
-function validate(formState: Partial<RegisterFormState>): FormError[] {
-  const errors: FormError[] = []
-
-  if (!formState.email?.trim()) {
-    errors.push({ name: 'email', message: 'Email is required.' })
-  }
-
-  if (!formState.password) {
-    errors.push({ name: 'password', message: 'Password is required.' })
-  } else if (formState.password.length < 8) {
-    errors.push({ name: 'password', message: 'Use at least 8 characters.' })
-  }
-
-  if (!formState.confirmPassword) {
-    errors.push({ name: 'confirmPassword', message: 'Confirm your password.' })
-  } else if (formState.password !== formState.confirmPassword) {
-    errors.push({ name: 'confirmPassword', message: 'Passwords must match.' })
-  }
-
-  return errors
-}
-
-async function onSubmit(event: FormSubmitEvent<RegisterFormState>) {
+async function onSubmit(event: Event) {
+  event.preventDefault()
   isSubmitting.value = true
   errorMessage.value = ''
 
+  if (!state.email.trim() || !state.password || !state.confirmPassword) {
+    errorMessage.value = 'All fields are required.'
+    isSubmitting.value = false
+    return
+  }
+
+  if (state.password.length < 8) {
+    errorMessage.value = 'Password must be at least 8 characters.'
+    isSubmitting.value = false
+    return
+  }
+
+  if (state.password !== state.confirmPassword) {
+    errorMessage.value = 'Passwords must match.'
+    isSubmitting.value = false
+    return
+  }
+
   try {
     await register({
-      email: event.data.email.trim(),
-      password: event.data.password,
+      email: state.email.trim(),
+      password: state.password,
     })
 
     await router.push({
       path: '/login',
       query: {
-        email: event.data.email.trim(),
+        email: state.email.trim(),
         registered: '1',
       },
     })
@@ -74,69 +70,210 @@ async function onSubmit(event: FormSubmitEvent<RegisterFormState>) {
 </script>
 
 <template>
-  <main class="mx-auto flex min-h-svh w-full max-w-xl items-center px-4 py-10 sm:px-6">
-    <UCard variant="subtle" class="w-full border border-default/60 backdrop-blur-sm">
-      <template #header>
-        <div class="space-y-1">
-          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Neuro</p>
-          <h1 class="text-2xl font-semibold text-highlighted">Create account</h1>
+  <main class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <p class="auth-brand">Neuro</p>
+        <h1 class="auth-title">Create account</h1>
+      </div>
+
+      <div class="auth-content">
+        <div v-if="errorMessage" class="alert alert-error">
+          <strong>Registration failed</strong>
+          <p>{{ errorMessage }}</p>
         </div>
-      </template>
 
-      <div class="space-y-4">
-        <UAlert
-          v-if="errorMessage"
-          color="error"
-          variant="soft"
-          title="Registration failed"
-          :description="errorMessage"
-        />
-
-        <UForm :state="state" :validate="validate" class="space-y-4" @submit="onSubmit">
-          <UFormField name="email" label="Email" required>
-            <UInput
+        <form class="auth-form" @submit="onSubmit">
+          <div class="form-field">
+            <label for="email">Email</label>
+            <input
+              id="email"
               v-model="state.email"
               type="email"
               autocomplete="email"
               placeholder="you@example.com"
-              class="w-full"
+              required
             />
-          </UFormField>
+          </div>
 
-          <UFormField name="password" label="Password" required>
-            <UInput
+          <div class="form-field">
+            <label for="password">Password</label>
+            <input
+              id="password"
               v-model="state.password"
               type="password"
               autocomplete="new-password"
               placeholder="Choose a strong password"
-              class="w-full"
+              required
             />
-          </UFormField>
+          </div>
 
-          <UFormField name="confirmPassword" label="Confirm password" required>
-            <UInput
+          <div class="form-field">
+            <label for="confirmPassword">Confirm password</label>
+            <input
+              id="confirmPassword"
               v-model="state.confirmPassword"
               type="password"
               autocomplete="new-password"
               placeholder="Repeat your password"
-              class="w-full"
+              required
             />
-          </UFormField>
+          </div>
 
-          <UButton type="submit" block :loading="isSubmitting">
-            Register
-          </UButton>
-        </UForm>
+          <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+            {{ isSubmitting ? 'Creating account...' : 'Register' }}
+          </button>
+        </form>
       </div>
 
-      <template #footer>
-        <div class="flex items-center justify-between text-sm text-toned">
-          <span>Already registered?</span>
-          <UButton to="/login" variant="link" color="primary">
-            Go to sign in
-          </UButton>
-        </div>
-      </template>
-    </UCard>
+      <div class="auth-footer">
+        <span>Already registered?</span>
+        <router-link to="/login" class="link">Go to sign in</router-link>
+      </div>
+    </div>
   </main>
 </template>
+
+<style scoped>
+.auth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2.5rem 1rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 36rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+}
+
+.auth-header {
+  margin-bottom: 2rem;
+}
+
+.auth-brand {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.5rem;
+}
+
+.auth-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.auth-content {
+  margin-bottom: 1.5rem;
+}
+
+.alert {
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.alert strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.form-field input {
+  padding: 0.625rem 0.875rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.375rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.form-field input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.form-field input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.btn {
+  padding: 0.625rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link:hover {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+</style>

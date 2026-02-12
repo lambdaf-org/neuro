@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "@nuxt/ui";
 
 @theme {
   --font-sans: "Plus Jakarta Sans", "Segoe UI Variable", "Segoe UI", sans-serif;
