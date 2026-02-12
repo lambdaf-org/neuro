@@ -93,3 +93,4 @@ CREATE INDEX idx_assets_group     ON public.game_assets(group_id);
 CREATE INDEX idx_sessions_user    ON public.game_sessions(user_id);
 CREATE INDEX idx_events_session   ON public.game_events(session_id);
 CREATE INDEX idx_scores_user      ON public.scores(user_id);
+CREATE INDEX idx_anticheat_user   ON public.anticheat_log(user_id);
