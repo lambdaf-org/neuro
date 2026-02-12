@@ -1,21 +1,19 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import type { FormError, FormSubmitEvent } from '@nuxt/ui'
+import { useRoute, useRouter } from 'vue-router'
 
 import { ApiError, login, saveSession } from '@/lib/auth-api'
 
 interface LoginFormState {
   email: string
-  username: string
   password: string
 }
 
 const route = useRoute()
+const router = useRouter()
 
 const state = reactive<LoginFormState>({
   email: '',
-  username: '',
   password: '',
 })
 
@@ -37,34 +35,22 @@ function syncRouteState() {
 syncRouteState()
 watch(() => route.query, syncRouteState)
 
-function validate(formState: Partial<LoginFormState>): FormError[] {
-  const errors: FormError[] = []
-
-  if (!formState.email?.trim()) {
-    errors.push({ name: 'email', message: 'Email is required.' })
-  }
-
-  if (!formState.username?.trim()) {
-    errors.push({ name: 'username', message: 'Username is required.' })
-  }
-
-  if (!formState.password) {
-    errors.push({ name: 'password', message: 'Password is required.' })
-  }
-
-  return errors
-}
-
-async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
+async function onSubmit(event: Event) {
+  event.preventDefault()
   isSubmitting.value = true
   errorMessage.value = ''
   successMessage.value = ''
 
+  if (!state.email.trim() || !state.password) {
+    errorMessage.value = 'Email and password are required.'
+    isSubmitting.value = false
+    return
+  }
+
   try {
     const session = await login({
-      email: event.data.email.trim(),
-      username: event.data.username.trim(),
-      password: event.data.password,
+      email: state.email.trim(),
+      password: state.password,
     })
 
     saveSession(session)
@@ -83,72 +69,209 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
 </script>
 
 <template>
-  <main class="mx-auto flex min-h-svh w-full max-w-xl items-center px-4 py-10 sm:px-6">
-    <UCard variant="subtle" class="w-full border border-default/60 backdrop-blur-sm">
-      <template #header>
-        <div class="space-y-1">
-          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Neuro</p>
-          <h1 class="text-2xl font-semibold text-highlighted">Sign in</h1>
+  <main class="auth-container">
+    <div class="auth-card">
+      <div class="auth-header">
+        <p class="auth-brand">Neuro</p>
+        <h1 class="auth-title">Sign in</h1>
+      </div>
+
+      <div class="auth-content">
+        <div v-if="errorMessage" class="alert alert-error">
+          <strong>Authentication failed</strong>
+          <p>{{ errorMessage }}</p>
         </div>
-      </template>
 
-      <div class="space-y-4">
-        <UAlert
-          v-if="errorMessage"
-          color="error"
-          variant="soft"
-          title="Authentication failed"
-          :description="errorMessage"
-        />
+        <div v-if="successMessage" class="alert alert-success">
+          <strong>Success</strong>
+          <p>{{ successMessage }}</p>
+        </div>
 
-        <UAlert
-          v-if="successMessage"
-          color="success"
-          variant="soft"
-          title="Success"
-          :description="successMessage"
-        />
-
-        <UForm :state="state" :validate="validate" class="space-y-4" @submit="onSubmit">
-          <UFormField name="email" label="Email" required>
-            <UInput
+        <form class="auth-form" @submit="onSubmit">
+          <div class="form-field">
+            <label for="email">Email</label>
+            <input
+              id="email"
               v-model="state.email"
               type="email"
               autocomplete="email"
               placeholder="you@example.com"
-              class="w-full"
+              required
             />
-          </UFormField>
+          </div>
 
-          <UFormField name="username" label="Username" required>
-            <UInput
-              v-model="state.username"
-              autocomplete="username"
-              placeholder="yourhandle1"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField name="password" label="Password" required>
-            <UInput
+          <div class="form-field">
+            <label for="password">Password</label>
+            <input
+              id="password"
               v-model="state.password"
               type="password"
               autocomplete="current-password"
               placeholder="********"
-              class="w-full"
+              required
             />
-          </UFormField>
+          </div>
 
-          <UButton type="submit" block :loading="isSubmitting"> Sign in </UButton>
-        </UForm>
+          <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
+            {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
+          </button>
+        </form>
       </div>
 
-      <template #footer>
-        <div class="flex items-center justify-between text-sm text-toned">
-          <span>No account yet?</span>
-          <UButton to="/register" variant="link" color="primary"> Create account </UButton>
-        </div>
-      </template>
-    </UCard>
+      <div class="auth-footer">
+        <span>No account yet?</span>
+        <router-link to="/register" class="link">Create account</router-link>
+      </div>
+    </div>
   </main>
 </template>
+
+<style scoped>
+.auth-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2.5rem 1rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 36rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+}
+
+.auth-header {
+  margin-bottom: 2rem;
+}
+
+.auth-brand {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.5rem;
+}
+
+.auth-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.auth-content {
+  margin-bottom: 1.5rem;
+}
+
+.alert {
+  padding: 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 1rem;
+}
+
+.alert strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.alert-error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.alert-success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #86efac;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.form-field input {
+  padding: 0.625rem 0.875rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.375rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.form-field input:focus {
+  outline: none;
+  border-color: rgba(59, 130, 246, 0.5);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.form-field input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.btn {
+  padding: 0.625rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link:hover {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+</style>
