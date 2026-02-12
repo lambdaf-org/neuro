@@ -1,20 +1,21 @@
 <script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
+import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
 import { ApiError, login, saveSession } from '@/lib/auth-api'
-import '@/assets/auth.css'
 
 interface LoginFormState {
   email: string
+  username: string
   password: string
 }
 
 const route = useRoute()
-const router = useRouter()
 
 const state = reactive<LoginFormState>({
   email: '',
+  username: '',
   password: '',
 })
 
@@ -36,22 +37,34 @@ function syncRouteState() {
 syncRouteState()
 watch(() => route.query, syncRouteState)
 
-async function onSubmit(event: Event) {
-  event.preventDefault()
+function validate(formState: Partial<LoginFormState>): FormError[] {
+  const errors: FormError[] = []
+
+  if (!formState.email?.trim()) {
+    errors.push({ name: 'email', message: 'Email is required.' })
+  }
+
+  if (!formState.username?.trim()) {
+    errors.push({ name: 'username', message: 'Username is required.' })
+  }
+
+  if (!formState.password) {
+    errors.push({ name: 'password', message: 'Password is required.' })
+  }
+
+  return errors
+}
+
+async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
   isSubmitting.value = true
   errorMessage.value = ''
   successMessage.value = ''
 
-  if (!state.email.trim() || !state.password) {
-    errorMessage.value = 'Email and password are required.'
-    isSubmitting.value = false
-    return
-  }
-
   try {
     const session = await login({
-      email: state.email.trim(),
-      password: state.password,
+      email: event.data.email.trim(),
+      username: event.data.username.trim(),
+      password: event.data.password,
     })
 
     saveSession(session)
@@ -70,59 +83,72 @@ async function onSubmit(event: Event) {
 </script>
 
 <template>
-  <main class="auth-container">
-    <div class="auth-card">
-      <div class="auth-header">
-        <p class="auth-brand">Neuro</p>
-        <h1 class="auth-title">Sign in</h1>
-      </div>
-
-      <div class="auth-content">
-        <div v-if="errorMessage" class="alert alert-error">
-          <strong>Authentication failed</strong>
-          <p>{{ errorMessage }}</p>
+  <main class="mx-auto flex min-h-svh w-full max-w-xl items-center px-4 py-10 sm:px-6">
+    <UCard variant="subtle" class="w-full border border-default/60 backdrop-blur-sm">
+      <template #header>
+        <div class="space-y-1">
+          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-secondary">Neuro</p>
+          <h1 class="text-2xl font-semibold text-highlighted">Sign in</h1>
         </div>
+      </template>
 
-        <div v-if="successMessage" class="alert alert-success">
-          <strong>Success</strong>
-          <p>{{ successMessage }}</p>
-        </div>
+      <div class="space-y-4">
+        <UAlert
+          v-if="errorMessage"
+          color="error"
+          variant="soft"
+          title="Authentication failed"
+          :description="errorMessage"
+        />
 
-        <form class="auth-form" @submit="onSubmit">
-          <div class="form-field">
-            <label for="email">Email</label>
-            <input
-              id="email"
+        <UAlert
+          v-if="successMessage"
+          color="success"
+          variant="soft"
+          title="Success"
+          :description="successMessage"
+        />
+
+        <UForm :state="state" :validate="validate" class="space-y-4" @submit="onSubmit">
+          <UFormField name="email" label="Email" required>
+            <UInput
               v-model="state.email"
               type="email"
               autocomplete="email"
               placeholder="you@example.com"
-              required
+              class="w-full"
             />
-          </div>
+          </UFormField>
 
-          <div class="form-field">
-            <label for="password">Password</label>
-            <input
-              id="password"
+          <UFormField name="username" label="Username" required>
+            <UInput
+              v-model="state.username"
+              autocomplete="username"
+              placeholder="yourhandle1"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField name="password" label="Password" required>
+            <UInput
               v-model="state.password"
               type="password"
               autocomplete="current-password"
               placeholder="********"
-              required
+              class="w-full"
             />
-          </div>
+          </UFormField>
 
-          <button type="submit" class="btn btn-primary" :disabled="isSubmitting">
-            {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
-          </button>
-        </form>
+          <UButton type="submit" block :loading="isSubmitting"> Sign in </UButton>
+        </UForm>
       </div>
 
-      <div class="auth-footer">
-        <span>No account yet?</span>
-        <router-link to="/register" class="link">Create account</router-link>
-      </div>
-    </div>
+      <template #footer>
+        <div class="flex items-center justify-between text-sm text-toned">
+          <span>No account yet?</span>
+          <UButton to="/register" variant="link" color="primary"> Create account </UButton>
+        </div>
+      </template>
+    </UCard>
   </main>
 </template>
