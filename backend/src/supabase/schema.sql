@@ -77,6 +77,16 @@ CREATE TABLE public.scores (
     UNIQUE(user_id, game_code)
 );
 
+-- ANTI-CHEAT LOG
+CREATE TABLE public.anticheat_log (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id    UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    session_id UUID REFERENCES public.game_sessions(id),
+    action     TEXT NOT NULL,
+    reason     TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
 -- INDEXES
 CREATE INDEX idx_groups_game      ON public.asset_groups(game_code);
 CREATE INDEX idx_assets_group     ON public.game_assets(group_id);
