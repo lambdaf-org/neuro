@@ -30,6 +30,7 @@ pub async fn register(
         }
     }
 }
+
 pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) -> HttpResponse {
     let session = match state
         .auth_client

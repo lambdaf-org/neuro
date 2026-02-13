@@ -49,3 +49,10 @@ pub async fn finalize_session(
         Err(e) => HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
     }
 }
+
+pub async fn get_game_session(state: web::Data<AppState>, path: web::Path<Uuid>) -> HttpResponse {
+    match game_repository::get_session(&state.sb_client, path.into_inner()).await {
+        Ok(v) => HttpResponse::Ok().json(v),
+        Err(e) => HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
+    }
+}
