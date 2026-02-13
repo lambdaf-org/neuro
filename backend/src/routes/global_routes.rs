@@ -1,5 +1,6 @@
 use crate::config::middleware;
 use crate::handlers::game_handler;
+use crate::handlers::game_handler::get_game_session;
 use crate::handlers::user_handler::login;
 use crate::handlers::user_handler::register;
 use crate::models::user::MiddlewareData;
@@ -24,7 +25,8 @@ pub fn init_api_scope(cfg: &mut web::ServiceConfig) {
             .wrap(from_fn(auth_filter))
             .route("/game/{code}", web::post().to(start_game))
             .route("/game/{code}", web::get().to(get_game_assets))
-            .route("/game/session/{id}", web::patch().to(finalize_session)),
+            .route("/game/session/{id}", web::patch().to(finalize_session))
+            .route("/game/session/{id}", web::get().to(get_game_session)),
     );
 }
 

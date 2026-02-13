@@ -6,6 +6,7 @@ use uuid::Uuid;
 use crate::errors::custom_errors::RepoError;
 use crate::models::game::AssetGroupRes;
 use crate::models::game::GameAssetRes;
+use crate::models::game::GameSession;
 
 // TODO: Create enum for game codes
 pub async fn create_session(
@@ -92,4 +93,25 @@ pub async fn finalize_session(
     })?;
 
     Ok(())
+}
+
+pub async fn get_session(db: &SupabaseClient, session_id: Uuid) -> Result<GameSession, RepoError> {
+    let rows = db
+        .select("game_sessions")
+        .eq("id", &session_id.to_string())
+        .execute()
+        .await
+        .map_err(|e| {
+            log::error!("Failed fetching game session: {e}");
+            RepoError::ExtractionError(String::from("Failed fetching game session"))
+        })?;
+
+    let row = rows
+        .into_iter()
+        .next()
+        .ok_or(RepoError::ExtractionError(String::from(
+            "Session not found",
+        )))?;
+
+    serde_json::from_value(row).map_err(|e| RepoError::ExtractionError(e.to_string()))
 }
