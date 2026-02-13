@@ -1,8 +1,10 @@
 use actix_web::HttpResponse;
 use actix_web::web;
 use serde_json::json;
+use uuid::Uuid;
 
 use crate::models::app_state::AppState;
+use crate::models::game::FinalizeSessionReq;
 use crate::models::user::MiddlewareData;
 use crate::repositories::game_repository;
 
@@ -35,4 +37,15 @@ pub async fn get_game_assets(path: web::Path<String>, state: web::Data<AppState>
     }
 
     HttpResponse::Ok().json(asset_group)
+}
+
+pub async fn finalize_session(
+    path: web::Path<Uuid>,
+    body: web::Json<FinalizeSessionReq>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    match game_repository::finalize_session(&state.sb_client, path.into_inner(), body.score).await {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(e) => HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
+    }
 }

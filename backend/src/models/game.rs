@@ -7,7 +7,7 @@ pub struct AssetGroupRes {
     pub label: String,
     pub game_code: String,
     #[serde(skip_deserializing)]
-    pub assets: Vec<GameAsset>,
+    pub assets: Vec<GameAssetRes>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -16,4 +16,9 @@ pub struct GameAssetRes {
     pub label: String,
     pub image_url: String,
     pub is_correct: bool,
+}
+
+#[derive(Deserialize)]
+pub struct FinalizeSessionReq {
+    pub score: f64,
 }

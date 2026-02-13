@@ -67,3 +67,29 @@ pub async fn get_game_assets(
     serde_json::from_value(Value::Array(rows))
         .map_err(|e| RepoError::ExtractionError(e.to_string()))
 }
+
+pub async fn finalize_session(
+    db: &SupabaseClient,
+    session_id: Uuid,
+    score: f64,
+) -> Result<(), RepoError> {
+    let db_result = db
+        .update(
+            "game_sessions",
+            session_id.to_string().as_str(),
+            json!({
+                "score": score,
+                // TODO: Make enumeration out of it
+                "status": "completed",
+                "completed_at": chrono::Utc::now().to_rfc3339(),
+            }),
+        )
+        .await;
+
+    db_result.map_err(|e| {
+        log::error!("Failed inserting new game session: {e}");
+        RepoError::InsertionError(String::from("Failed inserting game"))
+    })?;
+
+    Ok(())
+}
