@@ -33,7 +33,7 @@ pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) ->
         Ok(session) => session,
         Err(e) => {
             error!("Login failed for email {}: {e}", body.email);
-            return HttpResponse::Unauthorized().body("Invalid credentials");
+            return HttpResponse::BadRequest().body("Invalid credentials or Email not confirmed");
         }
     };
 

@@ -14,9 +14,12 @@ use supabase_auth::models::AuthClient;
 use supabase_rs::SupabaseClient;
 
 pub mod config;
+pub mod errors;
 pub mod handlers;
 pub mod models;
+pub mod repositories;
 pub mod routes;
+pub mod services;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
