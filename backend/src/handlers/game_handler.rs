@@ -1,0 +1,38 @@
+use actix_web::HttpResponse;
+use actix_web::web;
+use serde_json::json;
+
+use crate::models::app_state::AppState;
+use crate::models::user::MiddlewareData;
+use crate::repositories::game_repository;
+
+pub async fn start_game(
+    path: web::Path<String>,
+    ext_data: web::ReqData<MiddlewareData>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    match game_repository::create_session(&state.sb_client, ext_data.user_id, path.into_inner())
+        .await
+    {
+        Ok(v) => HttpResponse::Ok().body(v),
+        Err(e) => HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
+    }
+}
+
+pub async fn get_game_assets(path: web::Path<String>, state: web::Data<AppState>) -> HttpResponse {
+    // TODO: Refine with a join to one shot this
+    let mut asset_group =
+        match game_repository::get_asset_groups(&state.sb_client, path.into_inner()).await {
+            Ok(v) => v,
+            Err(e) => return HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
+        };
+
+    for group in asset_group.iter_mut() {
+        match game_repository::get_game_assets(&state.sb_client, group.id).await {
+            Ok(assets) => group.assets = assets,
+            Err(e) => return HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
+        }
+    }
+
+    HttpResponse::Ok().json(asset_group)
+}

@@ -1,4 +1,5 @@
 use crate::config::middleware;
+use crate::handlers::game_handler;
 use crate::handlers::user_handler::login;
 use crate::handlers::user_handler::register;
 use crate::models::user::MiddlewareData;
@@ -10,11 +11,16 @@ use actix_web::error::ErrorUnauthorized;
 use actix_web::middleware::Next;
 use actix_web::middleware::from_fn;
 use actix_web::web;
+use game_handler::start_game;
 use log::error;
 
 // Routes starting with "/api", which also are protected by the middleware
 pub fn init_api_scope(cfg: &mut web::ServiceConfig) {
-    cfg.service(web::scope("/api").wrap(from_fn(auth_filter)));
+    cfg.service(
+        web::scope("/api")
+            .wrap(from_fn(auth_filter))
+            .route("/start-game", web::post().to(start_game)),
+    );
 }
 
 // Unprotected routes
