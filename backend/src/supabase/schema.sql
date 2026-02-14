@@ -2,7 +2,6 @@
 DROP TABLE IF EXISTS public.game_assets CASCADE;
 DROP TABLE IF EXISTS public.asset_groups CASCADE;
 DROP TABLE IF EXISTS public.anticheat_log CASCADE;
-DROP TABLE IF EXISTS public.scores CASCADE;
 DROP TABLE IF EXISTS public.game_sessions CASCADE;
 DROP TABLE IF EXISTS public.game_events CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
@@ -40,17 +39,6 @@ CREATE TABLE public.game_sessions (
     completed_at TIMESTAMPTZ
 );
 
--- SCORES
-CREATE TABLE public.scores (
-    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id     UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-    game_code   TEXT NOT NULL,
-    session_id  UUID NOT NULL REFERENCES public.game_sessions(id),
-    score       DOUBLE PRECISION NOT NULL,
-    achieved_at TIMESTAMPTZ DEFAULT now(),
-    UNIQUE(user_id, game_code)
-);
-
 -- ANTI-CHEAT LOG
 CREATE TABLE public.anticheat_log (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -78,7 +66,6 @@ CREATE TABLE public.game_assets (
 );
 
 -- INDEXES
-CREATE INDEX idx_sessions_user  ON public.game_sessions(user_id);
 CREATE INDEX idx_scores_user    ON public.scores(user_id);
 CREATE INDEX idx_anticheat_user ON public.anticheat_log(user_id);
 CREATE INDEX idx_groups_game    ON public.asset_groups(game_code);
