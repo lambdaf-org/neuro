@@ -42,9 +42,22 @@ pub async fn get_game_assets(path: web::Path<String>, state: web::Data<AppState>
 pub async fn finalize_session(
     path: web::Path<Uuid>,
     body: web::Json<FinalizeSessionReq>,
+    ext_data: web::ReqData<MiddlewareData>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
-    match game_repository::finalize_session(&state.sb_client, path.into_inner(), body.score).await {
+    let session_id = path.into_inner();
+
+    // Ensure the session belongs to the authenticated user before finalizing
+    let session = match game_repository::get_session(&state.sb_client, session_id).await {
+        Ok(v) => v,
+        Err(e) => return HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
+    };
+
+    if session.user_id != ext_data.user_id {
+        return HttpResponse::Forbidden().finish();
+    }
+
+    match game_repository::finalize_session(&state.sb_client, session_id, body.score).await {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
     }
