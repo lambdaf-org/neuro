@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS public.asset_groups CASCADE;
 DROP TABLE IF EXISTS public.anticheat_log CASCADE;
 DROP TABLE IF EXISTS public.scores CASCADE;
 DROP TABLE IF EXISTS public.game_sessions CASCADE;
+DROP TABLE IF EXISTS public.game_events CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 
