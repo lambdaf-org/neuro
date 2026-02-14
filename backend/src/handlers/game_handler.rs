@@ -63,9 +63,19 @@ pub async fn finalize_session(
     }
 }
 
-pub async fn get_game_session(state: web::Data<AppState>, path: web::Path<Uuid>) -> HttpResponse {
+pub async fn get_game_session(
+    path: web::Path<Uuid>,
+    ext_data: web::ReqData<MiddlewareData>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
     match game_repository::get_session(&state.sb_client, path.into_inner()).await {
-        Ok(v) => HttpResponse::Ok().json(v),
+        Ok(v) => {
+            if v.user_id == ext_data.user_id {
+                HttpResponse::Ok().json(v)
+            } else {
+                HttpResponse::Forbidden().json(json!({"error": "forbidden"}))
+            }
+        }
         Err(e) => HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
     }
 }
