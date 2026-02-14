@@ -5,15 +5,22 @@ use crate::models::user::RegisterPayload;
 use actix_web::HttpResponse;
 use actix_web::web;
 use log::error;
-use supabase_auth::models::UpdatedUser;
+use supabase_auth::models::SignUpWithPasswordOptions;
 
 pub async fn register(
     body: web::Json<RegisterPayload>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    let options = SignUpWithPasswordOptions {
+        data: Some(serde_json::json!({
+            "display_name": body.username
+        })),
+        ..Default::default()
+    };
+
     match state
         .auth_client
-        .sign_up_with_email_and_password(&body.email, &body.password, None)
+        .sign_up_with_email_and_password(&body.email, &body.password, Some(options))
         .await
     {
         Ok(_) => HttpResponse::Ok().finish(),
@@ -33,27 +40,9 @@ pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) ->
         Ok(session) => session,
         Err(e) => {
             error!("Login failed for email {}: {e}", body.email);
-            return HttpResponse::Unauthorized().body("Invalid credentials");
+            return HttpResponse::BadRequest().body("Invalid credentials or Email not confirmed");
         }
     };
-
-    let updated_user = UpdatedUser {
-        email: None,
-        password: None,
-        data: Some(serde_json::json!({
-            "display_name": body.username
-        })),
-    };
-
-    if let Err(e) = state
-        .auth_client
-        .update_user(updated_user, &session.access_token)
-        .await
-    {
-        error!("Failed updating username for {}: {e}", &body.email);
-        return HttpResponse::InternalServerError()
-            .body("Login succeeded but failed to set username");
-    }
 
     HttpResponse::Ok().json(LoginRes {
         user_id: session.user.id,

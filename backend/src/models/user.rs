@@ -6,13 +6,13 @@ use uuid::Uuid;
 #[derive(Deserialize, ToSchema)]
 pub struct LoginPayload {
     pub email: String,
-    pub username: String,
     pub password: String,
 }
 
 #[derive(Deserialize, ToSchema)]
 pub struct RegisterPayload {
     pub email: String,
+    pub username: String,
     pub password: String,
 }
 
