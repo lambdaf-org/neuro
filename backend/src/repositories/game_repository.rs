@@ -38,7 +38,7 @@ pub async fn get_asset_groups(
     game_code: String,
 ) -> Result<Vec<AssetGroupRes>, RepoError> {
     let rows = db
-        .select("asset_group")
+        .select("asset_groups")
         .eq("game_code", &game_code)
         .execute()
         .await
