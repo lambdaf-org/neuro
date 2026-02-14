@@ -22,7 +22,7 @@ pub async fn start_game(
 }
 
 pub async fn get_game_assets(path: web::Path<String>, state: web::Data<AppState>) -> HttpResponse {
-    // TODO: Refine with a join to one shot this
+    // TODO: Refine with a join to one shot this (inefficient because O(N + 1))
     let mut asset_group =
         match game_repository::get_asset_groups(&state.sb_client, path.into_inner()).await {
             Ok(v) => v,
