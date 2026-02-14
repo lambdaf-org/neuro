@@ -88,8 +88,8 @@ pub async fn finalize_session(
         .await;
 
     db_result.map_err(|e| {
-        log::error!("Failed inserting new game session: {e}");
-        RepoError::InsertionError(String::from("Failed inserting game"))
+        log::error!("Failed updating game session: {e}");
+        RepoError::UpdateError(String::from("Failed updating game session"))
     })?;
 
     Ok(())
