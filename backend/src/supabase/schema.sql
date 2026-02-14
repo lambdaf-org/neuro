@@ -84,3 +84,7 @@ CREATE INDEX idx_anticheat_user ON public.anticheat_log(user_id);
 CREATE INDEX idx_groups_game    ON public.asset_groups(game_code);
 CREATE INDEX idx_assets_group   ON public.game_assets(group_id);
 
+-- CONSTRAINTS
+-- Ensure at most one correct asset per group
+CREATE UNIQUE INDEX idx_one_correct_per_group ON public.game_assets(group_id) WHERE is_correct = true;
+
