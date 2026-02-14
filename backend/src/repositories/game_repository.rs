@@ -109,7 +109,7 @@ pub async fn get_session(db: &SupabaseClient, session_id: Uuid) -> Result<GameSe
     let row = rows
         .into_iter()
         .next()
-        .ok_or(RepoError::ExtractionError(String::from(
+        .ok_or(RepoError::NotFound(String::from(
             "Session not found",
         )))?;
 
