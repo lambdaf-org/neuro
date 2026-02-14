@@ -74,10 +74,11 @@ pub async fn finalize_session(
     session_id: Uuid,
     score: f64,
 ) -> Result<(), RepoError> {
+    let session_id = session_id.to_string();
     let db_result = db
         .update(
+            &session_id,
             "game_sessions",
-            session_id.to_string().as_str(),
             json!({
                 "score": score,
                 // TODO: Make enumeration out of it
@@ -109,9 +110,7 @@ pub async fn get_session(db: &SupabaseClient, session_id: Uuid) -> Result<GameSe
     let row = rows
         .into_iter()
         .next()
-        .ok_or(RepoError::NotFound(String::from(
-            "Session not found",
-        )))?;
+        .ok_or(RepoError::NotFound(String::from("Session not found")))?;
 
     serde_json::from_value(row).map_err(|e| RepoError::ExtractionError(e.to_string()))
 }
