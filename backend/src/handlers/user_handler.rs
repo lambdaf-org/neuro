@@ -25,11 +25,15 @@ pub async fn register(
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => {
             let err = e.to_string();
-            if err.contains("email_exists") {
+            if err.contains("already") && err.contains("email") {
                 HttpResponse::Conflict().body("Email already registered")
-            } else if err.contains("weak_password") {
+            } else if err.contains("already") && err.contains("username") {
+                HttpResponse::Conflict().body("Username already taken")
+            } else if err.contains("already exists") {
+                HttpResponse::Conflict().body("Already exists")
+            } else if err.contains("password") {
                 HttpResponse::BadRequest().body("Password too weak")
-            } else if err.contains("over_request_rate_limit") {
+            } else if err.contains("rate") || err.contains("too many") {
                 HttpResponse::TooManyRequests().body("Too many attempts")
             } else {
                 error!("Registration failed: {e}");
@@ -47,12 +51,12 @@ pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) ->
     {
         Ok(session) => session,
         Err(e) => {
-            let err = e.to_string();
+            let err = e.to_string().to_lowercase();
             if err.contains("not confirmed") {
                 return HttpResponse::Forbidden().body("Email not confirmed");
-            } else if err.contains("invalid credentials") {
+            } else if err.contains("invalid") || err.contains("credentials") {
                 return HttpResponse::Unauthorized().body("Invalid credentials");
-            } else if err.contains("rate limit") {
+            } else if err.contains("rate") || err.contains("too many") {
                 return HttpResponse::TooManyRequests().body("Too many attempts");
             } else {
                 error!("Login failed for {}: {e}", body.email);
