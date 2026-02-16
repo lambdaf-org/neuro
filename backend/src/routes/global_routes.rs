@@ -1,9 +1,13 @@
 use crate::config::middleware;
 use crate::handlers::asset_handler::create_asset_group;
+use crate::handlers::asset_handler::create_game_asset;
 use crate::handlers::asset_handler::delete_asset_group;
+use crate::handlers::asset_handler::delete_game_asset;
 use crate::handlers::asset_handler::get_asset_groups_by_code;
 use crate::handlers::asset_handler::list_asset_groups;
+use crate::handlers::asset_handler::list_game_assets;
 use crate::handlers::asset_handler::update_asset_group;
+use crate::handlers::asset_handler::update_game_asset;
 use crate::handlers::game_handler;
 use crate::handlers::game_handler::get_game_session;
 use crate::handlers::user_handler::login;
@@ -31,6 +35,10 @@ pub fn init_admin_scope(cfg: &mut web::ServiceConfig) {
                 .route("/asset-groups", web::post().to(create_asset_group))
                 .route("/asset-groups", web::get().to(list_asset_groups))
                 .route("/asset-groups/{id}", web::put().to(update_asset_group))
+                .route("/game-assets", web::post().to(create_game_asset))
+                .route("/game-assets/{group_id}", web::get().to(list_game_assets))
+                .route("/game-assets/{id}", web::put().to(update_game_asset))
+                .route("/game-assets/{id}", web::delete().to(delete_game_asset))
                 .route("/asset-groups/{id}", web::delete().to(delete_asset_group)),
         );
     }
