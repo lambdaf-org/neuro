@@ -17,7 +17,6 @@ pub async fn register(
         })),
         ..Default::default()
     };
-
     match state
         .auth_client
         .sign_up_with_email_and_password(&body.email, &body.password, Some(options))
@@ -25,8 +24,17 @@ pub async fn register(
     {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => {
-            error!("User tried registering but it failed: {e}");
-            HttpResponse::InternalServerError().body("Failed registering, try again later.")
+            let err = e.to_string();
+            if err.contains("email_exists") {
+                HttpResponse::Conflict().body("Email already registered")
+            } else if err.contains("weak_password") {
+                HttpResponse::BadRequest().body("Password too weak")
+            } else if err.contains("over_request_rate_limit") {
+                HttpResponse::TooManyRequests().body("Too many attempts")
+            } else {
+                error!("Registration failed: {e}");
+                HttpResponse::InternalServerError().body("Registration failed")
+            }
         }
     }
 }
@@ -39,11 +47,19 @@ pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) ->
     {
         Ok(session) => session,
         Err(e) => {
-            error!("Login failed for email {}: {e}", body.email);
-            return HttpResponse::BadRequest().body("Invalid credentials or Email not confirmed");
+            let err = e.to_string();
+            if err.contains("not confirmed") {
+                return HttpResponse::Forbidden().body("Email not confirmed");
+            } else if err.contains("invalid credentials") {
+                return HttpResponse::Unauthorized().body("Invalid credentials");
+            } else if err.contains("rate limit") {
+                return HttpResponse::TooManyRequests().body("Too many attempts");
+            } else {
+                error!("Login failed for {}: {e}", body.email);
+                return HttpResponse::InternalServerError().body("Login failed");
+            }
         }
     };
-
     HttpResponse::Ok().json(LoginRes {
         user_id: session.user.id,
         email: body.email.clone(),
