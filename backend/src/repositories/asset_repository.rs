@@ -3,8 +3,8 @@ use serde_json::json;
 use supabase_rs::SupabaseClient;
 
 use crate::errors::custom_errors::RepoError;
-use crate::models::game::AssetGroupRes;
-use crate::models::game::GameAssetRes;
+use crate::models::assets::AssetGroupRes;
+use crate::models::assets::GameAssetRes;
 
 pub async fn create_asset_group(
     db: &SupabaseClient,
@@ -123,6 +123,63 @@ pub async fn delete_asset_group(db: &SupabaseClient, id: i32) -> Result<(), Repo
         .map_err(|e| {
             log::error!("Failed deleting asset group: {e}");
             RepoError::DeletionError(String::from("Failed deleting asset group"))
+        })?;
+    Ok(())
+}
+
+pub async fn create_game_asset(
+    db: &SupabaseClient,
+    group_id: i32,
+    label: &str,
+    image_url: &str,
+    is_correct: bool,
+) -> Result<String, RepoError> {
+    db.insert(
+        "game_assets",
+        json!({
+            "group_id": group_id,
+            "label": label,
+            "image_url": image_url,
+            "is_correct": is_correct,
+        }),
+    )
+    .await
+    .map_err(|e| {
+        log::error!("Failed inserting game asset: {e}");
+        RepoError::InsertionError(String::from("Failed inserting game asset"))
+    })
+}
+
+pub async fn update_game_asset(
+    db: &SupabaseClient,
+    id: i32,
+    label: &str,
+    image_url: &str,
+    is_correct: bool,
+) -> Result<(), RepoError> {
+    db.update(
+        "game_assets",
+        &id.to_string(),
+        json!({
+            "label": label,
+            "image_url": image_url,
+            "is_correct": is_correct,
+        }),
+    )
+    .await
+    .map_err(|e| {
+        log::error!("Failed updating game asset: {e}");
+        RepoError::UpdateError(String::from("Failed updating game asset"))
+    })?;
+    Ok(())
+}
+
+pub async fn delete_game_asset(db: &SupabaseClient, id: i32) -> Result<(), RepoError> {
+    db.delete("game_assets", &id.to_string())
+        .await
+        .map_err(|e| {
+            log::error!("Failed deleting game asset: {e}");
+            RepoError::DeletionError(String::from("Failed deleting game asset"))
         })?;
     Ok(())
 }

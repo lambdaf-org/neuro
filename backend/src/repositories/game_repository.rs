@@ -1,11 +1,8 @@
-use serde_json::Value;
 use serde_json::json;
 use supabase_rs::SupabaseClient;
 use uuid::Uuid;
 
 use crate::errors::custom_errors::RepoError;
-use crate::models::game::AssetGroupRes;
-use crate::models::game::GameAssetRes;
 use crate::models::game::GameSession;
 
 // TODO: Create enum for game codes
