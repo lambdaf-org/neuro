@@ -1,4 +1,8 @@
 use crate::config::middleware;
+use crate::handlers::asset_handler::create_asset_group;
+use crate::handlers::asset_handler::delete_asset_group;
+use crate::handlers::asset_handler::list_asset_groups;
+use crate::handlers::asset_handler::update_asset_group;
 use crate::handlers::game_handler;
 use crate::handlers::game_handler::get_game_session;
 use crate::handlers::user_handler::login;
@@ -20,7 +24,14 @@ use log::error;
 
 pub fn init_admin_scope(cfg: &mut web::ServiceConfig) {
     if std::env::var("ADMIN_API_ENABLED").unwrap_or_default() == "true" {
-        cfg.service(web::scope("/admin").wrap(from_fn(auth_filter)));
+        cfg.service(
+            web::scope("/admin")
+                .wrap(from_fn(auth_filter))
+                .route("/asset-groups", web::post().to(create_asset_group))
+                .route("/asset-groups", web::get().to(list_asset_groups))
+                .route("/asset-groups", web::put().to(update_asset_group))
+                .route("/asset-groups", web::delete().to(delete_asset_group)),
+        );
     }
 }
 

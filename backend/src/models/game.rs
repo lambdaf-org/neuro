@@ -20,6 +20,18 @@ pub struct GameAssetRes {
 }
 
 #[derive(Deserialize)]
+pub struct CreateAssetGroupReq {
+    pub game_code: String,
+    pub label: String,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateAssetGroupReq {
+    pub game_code: String,
+    pub label: String,
+}
+
+#[derive(Deserialize)]
 pub struct FinalizeSessionReq {
     pub score: f64,
 }
