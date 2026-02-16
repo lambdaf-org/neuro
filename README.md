@@ -26,6 +26,9 @@ cd backend
 cargo run
 ```
 
+### Database Reset
+To reset all tables, run the contents of `backend/src/supabase/schema.sql` in your Supabase dashboard under **SQL Editor > New Query**.
+
 ### Frontend Setup
 
 ```bash
