@@ -22,7 +22,7 @@ BEGIN
 
             INSERT INTO public.game_assets (group_id, label, image_url, is_correct) VALUES
             (gid, 'reference', base || '/' || gcode || '/group_' || LPAD(i::TEXT, 2, '0') || '/reference.svg', FALSE),
-            (gid, 'option_0',  base || '/' || gcode || '/group_' || LPAD(i::TEXT, 2, '0') || '/option_0.svg',  FALSE),
+            (gid, 'option_0',  base || '/' || gcode || '/group_' || LPAD(i::TEXT, 2, '0') || '/option_0.svg',  TRUE),
             (gid, 'option_1',  base || '/' || gcode || '/group_' || LPAD(i::TEXT, 2, '0') || '/option_1.svg',  FALSE),
             (gid, 'option_2',  base || '/' || gcode || '/group_' || LPAD(i::TEXT, 2, '0') || '/option_2.svg',  FALSE),
             (gid, 'option_3',  base || '/' || gcode || '/group_' || LPAD(i::TEXT, 2, '0') || '/option_3.svg',  FALSE);
