@@ -21,25 +21,6 @@ pub async fn start_game(
     }
 }
 
-pub async fn get_game_assets(path: web::Path<String>, state: web::Data<AppState>) -> HttpResponse {
-    // TODO: Refine with a join to one shot this (inefficient because O(N + 1))
-    // TODO: Do not expose the true answer on game asset fetch since players may cheat
-    let mut asset_group =
-        match game_repository::get_asset_groups(&state.sb_client, path.into_inner()).await {
-            Ok(v) => v,
-            Err(e) => return HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
-        };
-
-    for group in asset_group.iter_mut() {
-        match game_repository::get_game_assets(&state.sb_client, group.id).await {
-            Ok(assets) => group.assets = assets,
-            Err(e) => return HttpResponse::BadRequest().json(json!({"error": e.to_string()})),
-        }
-    }
-
-    HttpResponse::Ok().json(asset_group)
-}
-
 pub async fn finalize_session(
     path: web::Path<Uuid>,
     body: web::Json<FinalizeSessionReq>,
