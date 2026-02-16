@@ -37,6 +37,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(app_state.clone())
             .configure(global_routes::init_api_scope)
             .configure(global_routes::init_anon_scope)
+            .configure(global_routes::init_admin_scope)
     })
     .bind(format!("{}:{}", address.0, address.1))?
     .run()
