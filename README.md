@@ -76,6 +76,12 @@ PORT=8080
 ADMIN_API_ENABLED=true
 ```
 
+## Testing
+```bash
+cd backend
+cargo test
+```
+
 ## Current Status
 
 - ✅ Admin CRUD routes with env-based toggle (`ADMIN_API_ENABLED`)
