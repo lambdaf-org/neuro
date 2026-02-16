@@ -18,6 +18,12 @@ use game_handler::start_game;
 
 use log::error;
 
+pub fn init_admin_scope(cfg: &mut web::ServiceConfig) {
+    if std::env::var("ADMIN_API_ENABLED").unwrap_or_default() == "true" {
+        cfg.service(web::scope("/admin").wrap(from_fn(auth_filter)));
+    }
+}
+
 // Routes starting with "/api", which also are protected by the middleware
 pub fn init_api_scope(cfg: &mut web::ServiceConfig) {
     cfg.service(
