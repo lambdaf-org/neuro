@@ -401,12 +401,11 @@ mod handler_validation_behavior_tests {
 
     // === Game Asset Handler Validation ===
     
-    // Documents that empty fields pass deserialization but are validated by handlers
+    // Documents that game asset handlers do not validate empty fields
     #[test]
     fn test_game_asset_no_validation() {
-        // CreateGameAssetReq deserialization accepts empty strings.
-        // However, the handlers (create_game_asset, update_game_asset) validate
-        // empty fields and will reject them before reaching the database.
+        // Game asset handlers (create_game_asset, update_game_asset) do not validate
+        // empty strings at the handler level - they rely on database constraints
         let req = CreateGameAssetReq {
             group_id: 1,
             label: String::from(""),
@@ -414,7 +413,7 @@ mod handler_validation_behavior_tests {
             is_correct: false,
         };
         
-        // Deserialization accepts empty strings
+        // These will be passed to repository; database constraints will catch invalid data
         assert_eq!(req.label, "");
         assert_eq!(req.image_url, "");
     }
@@ -533,7 +532,7 @@ mod edge_case_tests {
             "is_correct": false
         });
         
-        // Empty URL passes deserialization; handler validates empty fields
+        // Empty URL passes deserialization; database/handler should validate
         let req: CreateGameAssetReq = serde_json::from_value(data).unwrap();
         assert_eq!(req.image_url, "");
     }

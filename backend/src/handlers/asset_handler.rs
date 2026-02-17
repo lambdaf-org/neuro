@@ -144,20 +144,9 @@ pub async fn create_game_asset(
     body: web::Json<CreateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
-    // Validate required fields are not empty
-    if body.label.is_empty() || body.image_url.is_empty() {
-        return HttpResponse::BadRequest().json(json!({
-            "error": "validation_error",
-            "message": "label and image_url are required"
-        }));
-    }
-
     // Validate image_url is a valid URL
     if Url::parse(&body.image_url).is_err() {
-        return HttpResponse::BadRequest().json(json!({
-            "error": "validation_error",
-            "message": "image_url must be a valid URL"
-        }));
+        return HttpResponse::BadRequest().json(json!({"error": "image_url must be a valid URL"}));
     }
 
     match asset_repository::create_game_asset(
@@ -185,20 +174,9 @@ pub async fn update_game_asset(
     body: web::Json<UpdateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
-    // Validate required fields are not empty
-    if body.label.is_empty() || body.image_url.is_empty() {
-        return HttpResponse::BadRequest().json(json!({
-            "error": "validation_error",
-            "message": "label and image_url are required"
-        }));
-    }
-
     // Validate image_url is a valid URL
     if Url::parse(&body.image_url).is_err() {
-        return HttpResponse::BadRequest().json(json!({
-            "error": "validation_error",
-            "message": "image_url must be a valid URL"
-        }));
+        return HttpResponse::BadRequest().json(json!({"error": "image_url must be a valid URL"}));
     }
 
     match asset_repository::update_game_asset(
