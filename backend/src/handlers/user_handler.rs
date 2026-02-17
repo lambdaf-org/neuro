@@ -42,10 +42,6 @@ pub async fn register(
                 AuthError::RateLimited => {
                     HttpResponse::TooManyRequests().body("Too many attempts")
                 }
-                AuthError::Other(_) => {
-                    error!("Registration failed: {e}");
-                    HttpResponse::InternalServerError().body("Registration failed")
-                }
                 _ => {
                     error!("Registration failed: {e}");
                     HttpResponse::InternalServerError().body("Registration failed")
