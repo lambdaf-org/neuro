@@ -17,4 +17,7 @@ pub enum RepoError {
 
     #[error("Not found error: {0}")]
     NotFound(String),
+
+    #[error("Constraint violation: {0}")]
+    ConstraintViolation(String),
 }
