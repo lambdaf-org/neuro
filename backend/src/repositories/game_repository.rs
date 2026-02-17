@@ -37,8 +37,8 @@ pub async fn finalize_session(
     let session_id = session_id.to_string();
     let db_result = db
         .update(
-            &session_id,
             "game_sessions",
+            &session_id,
             json!({
                 "score": score,
                 // TODO: Make enumeration out of it

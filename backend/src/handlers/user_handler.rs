@@ -3,6 +3,7 @@ use crate::models::app_state::AppState;
 use crate::models::user::LoginPayload;
 use crate::models::user::LoginRes;
 use crate::models::user::RegisterPayload;
+use crate::models::validate::Validate;
 use actix_web::HttpResponse;
 use actix_web::web;
 use log::error;
@@ -13,6 +14,9 @@ pub async fn register(
     body: web::Json<RegisterPayload>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    if let Err(errors) = body.validate() {
+        return HttpResponse::BadRequest().json(json!({"errors": errors}));
+    }
     let options = SignUpWithPasswordOptions {
         data: Some(serde_json::json!({
             "display_name": body.username
@@ -45,7 +49,8 @@ pub async fn register(
                 }
                 _ => {
                     error!("Registration failed: {e}");
-                    HttpResponse::InternalServerError().json(json!({"error": "Registration failed"}))
+                    HttpResponse::InternalServerError()
+                        .json(json!({"error": "Registration failed"}))
                 }
             }
         }
@@ -53,6 +58,10 @@ pub async fn register(
 }
 
 pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) -> HttpResponse {
+    if let Err(errors) = body.validate() {
+        return HttpResponse::BadRequest().json(json!({"errors": errors}));
+    }
+
     let session = match state
         .auth_client
         .login_with_email(&body.email, &body.password)
@@ -66,14 +75,17 @@ pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) ->
                     return HttpResponse::Forbidden().json(json!({"error": "Email not confirmed"}));
                 }
                 AuthError::InvalidCredentials => {
-                    return HttpResponse::Unauthorized().json(json!({"error": "Invalid credentials"}));
+                    return HttpResponse::Unauthorized()
+                        .json(json!({"error": "Invalid credentials"}));
                 }
                 AuthError::RateLimited => {
-                    return HttpResponse::TooManyRequests().json(json!({"error": "Too many attempts"}));
+                    return HttpResponse::TooManyRequests()
+                        .json(json!({"error": "Too many attempts"}));
                 }
                 _ => {
                     error!("Login failed: {e}");
-                    return HttpResponse::InternalServerError().json(json!({"error": "Login failed"}));
+                    return HttpResponse::InternalServerError()
+                        .json(json!({"error": "Login failed"}));
                 }
             }
         }
