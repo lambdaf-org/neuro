@@ -146,7 +146,10 @@ pub async fn create_game_asset(
 ) -> HttpResponse {
     // Validate image_url is a valid URL
     if Url::parse(&body.image_url).is_err() {
-        return HttpResponse::BadRequest().json(json!({"error": "image_url must be a valid URL"}));
+        return HttpResponse::BadRequest().json(json!({
+            "error": "validation_error",
+            "message": "image_url must be a valid URL"
+        }));
     }
 
     match asset_repository::create_game_asset(
@@ -176,7 +179,10 @@ pub async fn update_game_asset(
 ) -> HttpResponse {
     // Validate image_url is a valid URL
     if Url::parse(&body.image_url).is_err() {
-        return HttpResponse::BadRequest().json(json!({"error": "image_url must be a valid URL"}));
+        return HttpResponse::BadRequest().json(json!({
+            "error": "validation_error",
+            "message": "image_url must be a valid URL"
+        }));
     }
 
     match asset_repository::update_game_asset(
