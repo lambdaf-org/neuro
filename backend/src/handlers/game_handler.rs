@@ -17,7 +17,7 @@ pub async fn start_game(
     match game_repository::create_session(&state.sb_client, ext_data.user_id, path.into_inner())
         .await
     {
-        Ok(v) => HttpResponse::Ok().body(v),
+        Ok(id) => HttpResponse::Created().json(json!({"id": id})),
         Err(e) => e.to_response(),
     }
 }
