@@ -59,7 +59,7 @@ pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) ->
             } else if err.contains("rate") || err.contains("too many") {
                 return HttpResponse::TooManyRequests().body("Too many attempts");
             } else {
-                error!("Login failed for {}: {e}", body.email);
+                error!("Login failed: {e}");
                 return HttpResponse::InternalServerError().body("Login failed");
             }
         }
