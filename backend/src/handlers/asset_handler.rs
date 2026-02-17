@@ -53,7 +53,17 @@ fn map_repo_error(err: RepoError, context: &str) -> HttpResponse {
 }
 
 /// Validates image_url field to allow both absolute and relative URLs
-/// Returns true if the URL is valid (non-empty and starts with / or http)
+/// 
+/// Returns true if the URL is valid:
+/// - Absolute URLs must start with http:// or https:// and have content after the protocol
+/// - Relative URLs must start with / (but not //) and have content after the slash
+/// 
+/// Returns false for:
+/// - Empty or whitespace-only strings
+/// - Protocol-only URLs (e.g., "http://", "https://")
+/// - Single slash ("/")
+/// - Protocol-relative URLs (e.g., "//example.com")
+/// - URLs without proper prefix (e.g., "example.com/path")
 fn is_valid_image_url(url: &str) -> bool {
     let trimmed = url.trim();
     if trimmed.is_empty() {
@@ -70,7 +80,7 @@ fn is_valid_image_url(url: &str) -> bool {
     
     // Check for relative URLs (must start with / but not //)
     if trimmed.starts_with('/') && !trimmed.starts_with("//") {
-        return !trimmed[1..].is_empty();
+        return trimmed.len() > 1;
     }
     
     false
