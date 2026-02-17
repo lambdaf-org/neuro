@@ -1,12 +1,12 @@
 use crate::errors::auth_errors::AuthError;
 use crate::models::app_state::AppState;
-use crate::models::user::ErrorResponse;
 use crate::models::user::LoginPayload;
 use crate::models::user::LoginRes;
 use crate::models::user::RegisterPayload;
 use actix_web::HttpResponse;
 use actix_web::web;
 use log::error;
+use serde_json::json;
 use supabase_auth::models::SignUpWithPasswordOptions;
 
 pub async fn register(
@@ -29,35 +29,23 @@ pub async fn register(
             let auth_error = AuthError::from_supabase_error(&e);
             match auth_error {
                 AuthError::EmailAlreadyExists => {
-                    HttpResponse::Conflict().json(ErrorResponse {
-                        error: "Email already registered".to_string(),
-                    })
+                    HttpResponse::Conflict().json(json!({"error": "Email already registered"}))
                 }
                 AuthError::UsernameAlreadyTaken => {
-                    HttpResponse::Conflict().json(ErrorResponse {
-                        error: "Username already taken".to_string(),
-                    })
+                    HttpResponse::Conflict().json(json!({"error": "Username already taken"}))
                 }
                 AuthError::AlreadyExists => {
-                    HttpResponse::Conflict().json(ErrorResponse {
-                        error: "Already exists".to_string(),
-                    })
+                    HttpResponse::Conflict().json(json!({"error": "Already exists"}))
                 }
                 AuthError::WeakPassword => {
-                    HttpResponse::BadRequest().json(ErrorResponse {
-                        error: "Password too weak".to_string(),
-                    })
+                    HttpResponse::BadRequest().json(json!({"error": "Password too weak"}))
                 }
                 AuthError::RateLimited => {
-                    HttpResponse::TooManyRequests().json(ErrorResponse {
-                        error: "Too many attempts".to_string(),
-                    })
+                    HttpResponse::TooManyRequests().json(json!({"error": "Too many attempts"}))
                 }
                 _ => {
                     error!("Registration failed: {e}");
-                    HttpResponse::InternalServerError().json(ErrorResponse {
-                        error: "Registration failed".to_string(),
-                    })
+                    HttpResponse::InternalServerError().json(json!({"error": "Registration failed"}))
                 }
             }
         }
@@ -75,25 +63,17 @@ pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) ->
             let auth_error = AuthError::from_supabase_error(&e);
             match auth_error {
                 AuthError::EmailNotConfirmed => {
-                    return HttpResponse::Forbidden().json(ErrorResponse {
-                        error: "Email not confirmed".to_string(),
-                    });
+                    return HttpResponse::Forbidden().json(json!({"error": "Email not confirmed"}));
                 }
                 AuthError::InvalidCredentials => {
-                    return HttpResponse::Unauthorized().json(ErrorResponse {
-                        error: "Invalid credentials".to_string(),
-                    });
+                    return HttpResponse::Unauthorized().json(json!({"error": "Invalid credentials"}));
                 }
                 AuthError::RateLimited => {
-                    return HttpResponse::TooManyRequests().json(ErrorResponse {
-                        error: "Too many attempts".to_string(),
-                    });
+                    return HttpResponse::TooManyRequests().json(json!({"error": "Too many attempts"}));
                 }
                 _ => {
                     error!("Login failed: {e}");
-                    return HttpResponse::InternalServerError().json(ErrorResponse {
-                        error: "Login failed".to_string(),
-                    });
+                    return HttpResponse::InternalServerError().json(json!({"error": "Login failed"}));
                 }
             }
         }
