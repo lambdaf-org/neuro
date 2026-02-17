@@ -19,33 +19,23 @@ fn map_repo_error(err: RepoError, context: &str) -> HttpResponse {
                 "message": format!("{} not found", context)
             }))
         }
-        RepoError::InsertionError(msg) => {
-            // Check if it's a foreign key constraint violation
-            if msg.contains("foreign key") || msg.contains("constraint") || msg.contains("fkey") || msg.contains("violates") {
-                HttpResponse::Conflict().json(json!({
-                    "error": "constraint_violation",
-                    "message": format!("Invalid reference in {}", context)
-                }))
-            } else {
-                HttpResponse::UnprocessableEntity().json(json!({
-                    "error": "validation_error",
-                    "message": format!("Failed to create {}", context)
-                }))
-            }
+        RepoError::ConstraintViolation(_) => {
+            HttpResponse::Conflict().json(json!({
+                "error": "constraint_violation",
+                "message": format!("Invalid reference in {}", context)
+            }))
         }
-        RepoError::UpdateError(msg) => {
-            // Check if it's a foreign key constraint violation
-            if msg.contains("foreign key") || msg.contains("constraint") || msg.contains("fkey") || msg.contains("violates") {
-                HttpResponse::Conflict().json(json!({
-                    "error": "constraint_violation",
-                    "message": format!("Invalid reference in {}", context)
-                }))
-            } else {
-                HttpResponse::UnprocessableEntity().json(json!({
-                    "error": "validation_error",
-                    "message": format!("Failed to update {}", context)
-                }))
-            }
+        RepoError::InsertionError(_) => {
+            HttpResponse::UnprocessableEntity().json(json!({
+                "error": "validation_error",
+                "message": format!("Failed to create {}", context)
+            }))
+        }
+        RepoError::UpdateError(_) => {
+            HttpResponse::UnprocessableEntity().json(json!({
+                "error": "validation_error",
+                "message": format!("Failed to update {}", context)
+            }))
         }
         RepoError::ExtractionError(_) => {
             HttpResponse::InternalServerError().json(json!({
