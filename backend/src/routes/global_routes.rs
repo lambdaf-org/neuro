@@ -36,7 +36,7 @@ pub fn init_admin_scope(cfg: &mut web::ServiceConfig) {
                 .route("/asset-groups", web::get().to(list_asset_groups))
                 .route("/asset-groups/{id}", web::put().to(update_asset_group))
                 .route("/game-assets", web::post().to(create_game_asset))
-                .route("/game-assets/{group_id}", web::get().to(list_game_assets))
+                .route("/game-assets/{id}", web::get().to(list_game_assets))
                 .route("/game-assets/{id}", web::put().to(update_game_asset))
                 .route("/game-assets/{id}", web::delete().to(delete_game_asset))
                 .route("/asset-groups/{id}", web::delete().to(delete_asset_group)),
