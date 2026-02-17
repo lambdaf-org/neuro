@@ -76,3 +76,53 @@ fn deserialize_create_asset_group_empty_code() {
     let req: CreateAssetGroupReq = serde_json::from_value(data).unwrap();
     assert!(req.game_code.is_empty());
 }
+
+// Valid create game asset request with valid URL should deserialize
+#[test]
+fn deserialize_create_game_asset_valid_url() {
+    let data = json!({
+        "group_id": 1,
+        "label": "asset_1",
+        "image_url": "https://example.com/image.png",
+        "is_correct": true
+    });
+    let req: CreateGameAssetReq = serde_json::from_value(data).unwrap();
+    assert_eq!(req.image_url, "https://example.com/image.png");
+}
+
+// Invalid URL string should still deserialize at serde level -> handler validates URL format
+#[test]
+fn deserialize_create_game_asset_invalid_url() {
+    let data = json!({
+        "group_id": 1,
+        "label": "asset_1",
+        "image_url": "not-a-valid-url",
+        "is_correct": true
+    });
+    let req: CreateGameAssetReq = serde_json::from_value(data).unwrap();
+    assert_eq!(req.image_url, "not-a-valid-url");
+}
+
+// Valid update game asset request with valid URL should deserialize
+#[test]
+fn deserialize_update_game_asset_valid_url() {
+    let data = json!({
+        "label": "updated_asset",
+        "image_url": "https://example.com/updated.jpg",
+        "is_correct": false
+    });
+    let req: UpdateGameAssetReq = serde_json::from_value(data).unwrap();
+    assert_eq!(req.image_url, "https://example.com/updated.jpg");
+}
+
+// Invalid URL string should still deserialize at serde level -> handler validates URL format
+#[test]
+fn deserialize_update_game_asset_invalid_url() {
+    let data = json!({
+        "label": "updated_asset",
+        "image_url": "invalid url with spaces",
+        "is_correct": false
+    });
+    let req: UpdateGameAssetReq = serde_json::from_value(data).unwrap();
+    assert_eq!(req.image_url, "invalid url with spaces");
+}

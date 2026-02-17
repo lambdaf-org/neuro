@@ -1,6 +1,7 @@
 use actix_web::HttpResponse;
 use actix_web::web;
 use serde_json::json;
+use url::Url;
 
 use crate::errors::custom_errors::RepoError;
 use crate::models::app_state::AppState;
@@ -143,6 +144,11 @@ pub async fn create_game_asset(
     body: web::Json<CreateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    // Validate image_url is a valid URL
+    if Url::parse(&body.image_url).is_err() {
+        return HttpResponse::BadRequest().json(json!({"error": "image_url must be a valid URL"}));
+    }
+
     match asset_repository::create_game_asset(
         &state.sb_client,
         body.group_id,
@@ -168,6 +174,11 @@ pub async fn update_game_asset(
     body: web::Json<UpdateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    // Validate image_url is a valid URL
+    if Url::parse(&body.image_url).is_err() {
+        return HttpResponse::BadRequest().json(json!({"error": "image_url must be a valid URL"}));
+    }
+
     match asset_repository::update_game_asset(
         &state.sb_client,
         path.into_inner(),
