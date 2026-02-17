@@ -149,7 +149,10 @@ pub async fn create_game_asset(
         let err_msg = e.to_string();
         log::error!("Failed inserting game asset: {err_msg}");
         // Check for foreign key constraint violations
-        if err_msg.contains("foreign key") || err_msg.contains("violates foreign") || err_msg.contains("fkey") {
+        if err_msg.contains("foreign key")
+            || err_msg.contains("violates foreign")
+            || err_msg.contains("fkey")
+        {
             RepoError::ConstraintViolation(String::from("Foreign key constraint violation"))
         } else {
             RepoError::InsertionError(String::from("Failed inserting game asset"))

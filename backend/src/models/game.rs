@@ -1,10 +1,25 @@
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use crate::models::validate::Validate;
 
 #[derive(Deserialize)]
 pub struct FinalizeSessionReq {
     pub score: f64,
+}
+
+impl Validate for FinalizeSessionReq {
+    fn validate(&self) -> Result<(), Vec<&'static str>> {
+        let mut errors = Vec::new();
+        if self.score < 0.0 {
+            errors.push("score must be non-negative");
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
 }
 
 #[derive(Deserialize, Serialize)]
