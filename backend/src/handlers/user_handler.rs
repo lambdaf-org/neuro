@@ -1,4 +1,4 @@
-use crate::errors::auth_errors::AuthError;
+use crate::errors::custom_errors::AuthError;
 use crate::models::app_state::AppState;
 use crate::models::user::LoginPayload;
 use crate::models::user::LoginRes;
