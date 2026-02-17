@@ -18,9 +18,9 @@
 // - delete_asset_group: Calls repository to delete by ID, returns NoContent on success or BadRequest on error
 //
 // Game Asset Handlers:
-// - create_game_asset: Calls repository to insert with all fields, returns Created with ID or BadRequest on error
+// - create_game_asset: Validates that label and image_url are non-empty, calls repository to insert with all fields, returns Created with ID or BadRequest on error
 // - list_game_assets: Fetches assets by group_id, returns Ok with array or BadRequest on error
-// - update_game_asset: Calls repository to update all fields by ID, returns Ok on success or BadRequest on error
+// - update_game_asset: Validates that label and image_url are non-empty, calls repository to update all fields by ID, returns Ok on success or BadRequest on error
 // - delete_game_asset: Calls repository to delete by ID, returns NoContent on success or BadRequest on error
 //
 // INTEGRATION TEST RECOMMENDATIONS:
@@ -401,11 +401,11 @@ mod handler_validation_behavior_tests {
 
     // === Game Asset Handler Validation ===
     
-    // Documents that game asset handlers do not validate empty fields
+    // Documents that game asset handlers validate empty fields (but not whitespace-only)
     #[test]
-    fn test_game_asset_no_validation() {
-        // Game asset handlers (create_game_asset, update_game_asset) do not validate
-        // empty strings at the handler level - they rely on database constraints
+    fn test_game_asset_validation() {
+        // Game asset handlers (create_game_asset, update_game_asset) validate
+        // that label and image_url are not empty strings
         let req = CreateGameAssetReq {
             group_id: 1,
             label: String::from(""),
@@ -413,7 +413,7 @@ mod handler_validation_behavior_tests {
             is_correct: false,
         };
         
-        // These will be passed to repository; database constraints will catch invalid data
+        // Handler should reject these empty fields with validation_error
         assert_eq!(req.label, "");
         assert_eq!(req.image_url, "");
     }

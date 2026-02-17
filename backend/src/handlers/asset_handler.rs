@@ -143,6 +143,13 @@ pub async fn create_game_asset(
     body: web::Json<CreateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    if body.label.is_empty() || body.image_url.is_empty() {
+        return HttpResponse::BadRequest().json(json!({
+            "error": "validation_error",
+            "message": "label and image_url are required"
+        }));
+    }
+
     match asset_repository::create_game_asset(
         &state.sb_client,
         body.group_id,
@@ -168,6 +175,13 @@ pub async fn update_game_asset(
     body: web::Json<UpdateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    if body.label.is_empty() || body.image_url.is_empty() {
+        return HttpResponse::BadRequest().json(json!({
+            "error": "validation_error",
+            "message": "label and image_url are required"
+        }));
+    }
+
     match asset_repository::update_game_asset(
         &state.sb_client,
         path.into_inner(),
