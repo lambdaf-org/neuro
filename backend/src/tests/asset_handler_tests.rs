@@ -401,11 +401,11 @@ mod handler_validation_behavior_tests {
 
     // === Game Asset Handler Validation ===
     
-    // Documents that game asset handlers do not validate empty fields
+    // Documents that game asset handlers validate empty fields at the handler level
     #[test]
     fn test_game_asset_no_validation() {
-        // Game asset handlers (create_game_asset, update_game_asset) do not validate
-        // empty strings at the handler level - they rely on database constraints
+        // Game asset handlers (create_game_asset, update_game_asset) now validate
+        // empty strings at the handler level before reaching the database
         let req = CreateGameAssetReq {
             group_id: 1,
             label: String::from(""),
@@ -532,7 +532,7 @@ mod edge_case_tests {
             "is_correct": false
         });
         
-        // Empty URL passes deserialization; database/handler should validate
+        // Empty URL passes deserialization; handler validates empty fields
         let req: CreateGameAssetReq = serde_json::from_value(data).unwrap();
         assert_eq!(req.image_url, "");
     }
