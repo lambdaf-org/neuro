@@ -66,6 +66,7 @@ CREATE TABLE public.game_assets (
 );
 
 -- INDEXES
+CREATE INDEX idx_sessions_user  ON public.game_sessions(user_id);
 CREATE INDEX idx_anticheat_user ON public.anticheat_log(user_id);
 CREATE INDEX idx_groups_game    ON public.asset_groups(game_code);
 CREATE INDEX idx_assets_group   ON public.game_assets(group_id);
