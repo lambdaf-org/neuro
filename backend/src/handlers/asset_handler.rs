@@ -94,6 +94,9 @@ pub async fn create_game_asset(
     body: web::Json<CreateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    if body.image_url.trim().is_empty() {
+        return HttpResponse::BadRequest().json(json!({"error": "image_url is required"}));
+    }
     match asset_repository::create_game_asset(
         &state.sb_client,
         body.group_id,
@@ -119,6 +122,9 @@ pub async fn update_game_asset(
     body: web::Json<UpdateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    if body.image_url.trim().is_empty() {
+        return HttpResponse::BadRequest().json(json!({"error": "image_url is required"}));
+    }
     match asset_repository::update_game_asset(
         &state.sb_client,
         path.into_inner(),
