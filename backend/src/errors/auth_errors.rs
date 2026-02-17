@@ -42,9 +42,9 @@ impl AuthError {
             AuthError::UsernameAlreadyTaken
         } else if err_lower.contains("already exists") {
             AuthError::AlreadyExists
-        } else if err_lower.contains("password") 
-            && (err_lower.contains("weak") 
-                || err_lower.contains("strength") 
+        } else if err_lower.contains("password")
+            && (err_lower.contains("weak")
+                || err_lower.contains("strength")
                 || err_lower.contains("requirement")) {
             AuthError::WeakPassword
         } else if err_lower.contains("rate") || err_lower.contains("too many") {
