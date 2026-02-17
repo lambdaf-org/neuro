@@ -1,3 +1,4 @@
+use crate::errors::auth_errors::AuthError;
 use crate::models::app_state::AppState;
 use crate::models::user::LoginPayload;
 use crate::models::user::LoginRes;
@@ -24,20 +25,27 @@ pub async fn register(
     {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => {
-            let err = e.to_string();
-            if err.contains("already") && err.contains("email") {
-                HttpResponse::Conflict().body("Email already registered")
-            } else if err.contains("already") && err.contains("username") {
-                HttpResponse::Conflict().body("Username already taken")
-            } else if err.contains("already exists") && !err.contains("email") && !err.contains("username") {
-                HttpResponse::Conflict().body("Already exists")
-            } else if err.contains("password") {
-                HttpResponse::BadRequest().body("Password too weak")
-            } else if err.contains("rate") || err.contains("too many") {
-                HttpResponse::TooManyRequests().body("Too many attempts")
-            } else {
-                error!("Registration failed: {e}");
-                HttpResponse::InternalServerError().body("Registration failed")
+            let auth_error = AuthError::from_supabase_error(&e);
+            match auth_error {
+                AuthError::EmailAlreadyExists => {
+                    HttpResponse::Conflict().body("Email already registered")
+                }
+                AuthError::UsernameAlreadyTaken => {
+                    HttpResponse::Conflict().body("Username already taken")
+                }
+                AuthError::AlreadyExists => {
+                    HttpResponse::Conflict().body("Already exists")
+                }
+                AuthError::WeakPassword => {
+                    HttpResponse::BadRequest().body("Password too weak")
+                }
+                AuthError::RateLimited => {
+                    HttpResponse::TooManyRequests().body("Too many attempts")
+                }
+                _ => {
+                    error!("Registration failed: {e}");
+                    HttpResponse::InternalServerError().body("Registration failed")
+                }
             }
         }
     }
@@ -51,16 +59,21 @@ pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) ->
     {
         Ok(session) => session,
         Err(e) => {
-            let err = e.to_string().to_lowercase();
-            if err.contains("not confirmed") {
-                return HttpResponse::Forbidden().body("Email not confirmed");
-            } else if err.contains("invalid") || err.contains("credentials") {
-                return HttpResponse::Unauthorized().body("Invalid credentials");
-            } else if err.contains("rate") || err.contains("too many") {
-                return HttpResponse::TooManyRequests().body("Too many attempts");
-            } else {
-                error!("Login failed: {e}");
-                return HttpResponse::InternalServerError().body("Login failed");
+            let auth_error = AuthError::from_supabase_error(&e);
+            match auth_error {
+                AuthError::EmailNotConfirmed => {
+                    return HttpResponse::Forbidden().body("Email not confirmed");
+                }
+                AuthError::InvalidCredentials => {
+                    return HttpResponse::Unauthorized().body("Invalid credentials");
+                }
+                AuthError::RateLimited => {
+                    return HttpResponse::TooManyRequests().body("Too many attempts");
+                }
+                _ => {
+                    error!("Login failed for {}: {e}", body.email);
+                    return HttpResponse::InternalServerError().body("Login failed");
+                }
             }
         }
     };
