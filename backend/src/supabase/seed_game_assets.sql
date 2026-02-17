@@ -28,4 +28,17 @@ BEGIN
             (gid, 'option_3',  base || '/' || gcode || '/group_' || LPAD(i::TEXT, 2, '0') || '/option_3.svg',  FALSE);
         END LOOP;
     END LOOP;
+
+    -- Validate that each gv/gf asset group has exactly one correct asset
+    PERFORM 1
+    FROM public.asset_groups ag
+    JOIN public.game_assets ga ON ga.group_id = ag.id
+    WHERE ag.game_code IN ('gv', 'gf')
+    GROUP BY ag.id
+    HAVING SUM(CASE WHEN ga.is_correct THEN 1 ELSE 0 END) <> 1;
+
+    IF FOUND THEN
+        RAISE EXCEPTION
+            'Seed validation failed: each asset group for game_code in (gv, gf) must have exactly one correct game_asset (is_correct = TRUE).';
+    END IF;
 END $$;
