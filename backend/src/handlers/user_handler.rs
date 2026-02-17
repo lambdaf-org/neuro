@@ -29,7 +29,7 @@ pub async fn register(
                 HttpResponse::Conflict().body("Email already registered")
             } else if err.contains("already") && err.contains("username") {
                 HttpResponse::Conflict().body("Username already taken")
-            } else if err.contains("already exists") {
+            } else if err.contains("already exists") && !err.contains("email") && !err.contains("username") {
                 HttpResponse::Conflict().body("Already exists")
             } else if err.contains("password") {
                 HttpResponse::BadRequest().body("Password too weak")
