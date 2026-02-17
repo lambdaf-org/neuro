@@ -20,6 +20,8 @@ pub mod models;
 pub mod repositories;
 pub mod routes;
 pub mod services;
+#[cfg(test)]
+pub mod tests;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -35,6 +37,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(Logger::default())
             .app_data(app_state.clone())
+            .configure(global_routes::init_admin_scope)
             .configure(global_routes::init_api_scope)
             .configure(global_routes::init_anon_scope)
     })
