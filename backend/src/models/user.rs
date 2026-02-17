@@ -27,3 +27,8 @@ pub struct LoginRes {
     pub email: String,
     pub access_token: String,
 }
+
+#[derive(Serialize, ToSchema)]
+pub struct ErrorResponse {
+    pub error: String,
+}
