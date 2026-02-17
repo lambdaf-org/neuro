@@ -6,6 +6,7 @@ use crate::models::user::RegisterPayload;
 use actix_web::HttpResponse;
 use actix_web::web;
 use log::error;
+use serde_json::json;
 use supabase_auth::models::SignUpWithPasswordOptions;
 
 pub async fn register(
@@ -28,23 +29,23 @@ pub async fn register(
             let auth_error = AuthError::from_supabase_error(&e);
             match auth_error {
                 AuthError::EmailAlreadyExists => {
-                    HttpResponse::Conflict().body("Email already registered")
+                    HttpResponse::Conflict().json(json!({"error": "Email already registered"}))
                 }
                 AuthError::UsernameAlreadyTaken => {
-                    HttpResponse::Conflict().body("Username already taken")
+                    HttpResponse::Conflict().json(json!({"error": "Username already taken"}))
                 }
                 AuthError::AlreadyExists => {
-                    HttpResponse::Conflict().body("Already exists")
+                    HttpResponse::Conflict().json(json!({"error": "Already exists"}))
                 }
                 AuthError::WeakPassword => {
-                    HttpResponse::BadRequest().body("Password too weak")
+                    HttpResponse::BadRequest().json(json!({"error": "Password too weak"}))
                 }
                 AuthError::RateLimited => {
-                    HttpResponse::TooManyRequests().body("Too many attempts")
+                    HttpResponse::TooManyRequests().json(json!({"error": "Too many attempts"}))
                 }
                 _ => {
                     error!("Registration failed: {e}");
-                    HttpResponse::InternalServerError().body("Registration failed")
+                    HttpResponse::InternalServerError().json(json!({"error": "Registration failed"}))
                 }
             }
         }
@@ -62,17 +63,17 @@ pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) ->
             let auth_error = AuthError::from_supabase_error(&e);
             match auth_error {
                 AuthError::EmailNotConfirmed => {
-                    return HttpResponse::Forbidden().body("Email not confirmed");
+                    return HttpResponse::Forbidden().json(json!({"error": "Email not confirmed"}));
                 }
                 AuthError::InvalidCredentials => {
-                    return HttpResponse::Unauthorized().body("Invalid credentials");
+                    return HttpResponse::Unauthorized().json(json!({"error": "Invalid credentials"}));
                 }
                 AuthError::RateLimited => {
-                    return HttpResponse::TooManyRequests().body("Too many attempts");
+                    return HttpResponse::TooManyRequests().json(json!({"error": "Too many attempts"}));
                 }
                 _ => {
-                    error!("Login failed for {}: {e}", body.email);
-                    return HttpResponse::InternalServerError().body("Login failed");
+                    error!("Login failed: {e}");
+                    return HttpResponse::InternalServerError().json(json!({"error": "Login failed"}));
                 }
             }
         }
