@@ -52,6 +52,12 @@ fn map_repo_error(err: RepoError, context: &str) -> HttpResponse {
     }
 }
 
+/// Validates image_url field to allow both absolute and relative URLs
+/// Returns true if the URL is valid (non-empty and starts with / or http)
+fn is_valid_image_url(url: &str) -> bool {
+    !url.trim().is_empty() && (url.starts_with('/') || url.starts_with("http://") || url.starts_with("https://"))
+}
+
 pub async fn create_asset_group(
     body: web::Json<CreateAssetGroupReq>,
     state: web::Data<AppState>,
@@ -143,6 +149,14 @@ pub async fn create_game_asset(
     body: web::Json<CreateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    // Validate image_url format (allow both absolute and relative URLs)
+    if !is_valid_image_url(&body.image_url) {
+        return HttpResponse::BadRequest().json(json!({
+            "error": "validation_error",
+            "message": "image_url must be a valid absolute or relative URL"
+        }));
+    }
+
     match asset_repository::create_game_asset(
         &state.sb_client,
         body.group_id,
@@ -168,6 +182,14 @@ pub async fn update_game_asset(
     body: web::Json<UpdateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    // Validate image_url format (allow both absolute and relative URLs)
+    if !is_valid_image_url(&body.image_url) {
+        return HttpResponse::BadRequest().json(json!({
+            "error": "validation_error",
+            "message": "image_url must be a valid absolute or relative URL"
+        }));
+    }
+
     match asset_repository::update_game_asset(
         &state.sb_client,
         path.into_inner(),
