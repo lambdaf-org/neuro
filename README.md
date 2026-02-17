@@ -26,8 +26,9 @@ cd backend
 cargo run
 ```
 
-<<<<<<< Updated upstream
-=======
+### Seed Game Assets
+First, run `backend/src/supabase/schema.sql` in the Supabase SQL Editor to create the required database schema. Then run `backend/src/supabase/seed_game_assets.sql` in the Supabase SQL Editor. Replace `<project>` in the seed script with your Supabase project ID before running. This populates `asset_groups` and `game_assets` for both `gv` and `gf` games. Safe to re-run — it clears existing data first.
+
 ### Database Reset
 To reset all tables, run the contents of `backend/src/supabase/schema.sql` in your Supabase dashboard under **SQL Editor > New Query**.
 
@@ -51,7 +52,6 @@ Each group contains a reference image and four options. The public URL pattern i
 https://<project>.supabase.co/storage/v1/object/public/game-assets/<game_code>/<group>/<file>
 ```
 
->>>>>>> Stashed changes
 ### Frontend Setup
 
 ```bash
