@@ -61,20 +61,16 @@ fn is_valid_image_url(url: &str) -> bool {
     }
     
     // Check for absolute URLs (http:// or https://)
-    if trimmed.starts_with("http://") || trimmed.starts_with("https://") {
-        // Ensure there's content after the protocol
-        let after_protocol = if trimmed.starts_with("https://") {
-            &trimmed[8..]
-        } else {
-            &trimmed[7..]
-        };
+    if let Some(after_protocol) = trimmed.strip_prefix("https://") {
+        return !after_protocol.is_empty();
+    }
+    if let Some(after_protocol) = trimmed.strip_prefix("http://") {
         return !after_protocol.is_empty();
     }
     
     // Check for relative URLs (must start with / but not //)
     if trimmed.starts_with('/') && !trimmed.starts_with("//") {
-        // Ensure there's content after the /
-        return trimmed.len() > 1;
+        return !trimmed[1..].is_empty();
     }
     
     false
