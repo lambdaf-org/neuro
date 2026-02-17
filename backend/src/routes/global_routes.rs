@@ -1,4 +1,13 @@
 use crate::config::middleware;
+use crate::handlers::asset_handler::create_asset_group;
+use crate::handlers::asset_handler::create_game_asset;
+use crate::handlers::asset_handler::delete_asset_group;
+use crate::handlers::asset_handler::delete_game_asset;
+use crate::handlers::asset_handler::get_asset_groups_by_code;
+use crate::handlers::asset_handler::list_asset_groups;
+use crate::handlers::asset_handler::list_game_assets;
+use crate::handlers::asset_handler::update_asset_group;
+use crate::handlers::asset_handler::update_game_asset;
 use crate::handlers::game_handler;
 use crate::handlers::game_handler::get_game_session;
 use crate::handlers::user_handler::login;
@@ -13,10 +22,27 @@ use actix_web::middleware::Next;
 use actix_web::middleware::from_fn;
 use actix_web::web;
 use game_handler::finalize_session;
-use game_handler::get_game_assets;
 use game_handler::start_game;
 
 use log::error;
+
+pub fn init_admin_scope(cfg: &mut web::ServiceConfig) {
+    if std::env::var("ADMIN_API_ENABLED").unwrap_or_default() == "true" {
+        log::info!("Admin API enabled");
+        cfg.service(
+            web::scope("/admin")
+                .wrap(from_fn(auth_filter))
+                .route("/asset-groups", web::post().to(create_asset_group))
+                .route("/asset-groups", web::get().to(list_asset_groups))
+                .route("/asset-groups/{id}", web::put().to(update_asset_group))
+                .route("/game-assets", web::post().to(create_game_asset))
+                .route("/game-assets/{group_id}", web::get().to(list_game_assets))
+                .route("/game-assets/{id}", web::put().to(update_game_asset))
+                .route("/game-assets/{id}", web::delete().to(delete_game_asset))
+                .route("/asset-groups/{id}", web::delete().to(delete_asset_group)),
+        );
+    }
+}
 
 // Routes starting with "/api", which also are protected by the middleware
 pub fn init_api_scope(cfg: &mut web::ServiceConfig) {
@@ -24,7 +50,10 @@ pub fn init_api_scope(cfg: &mut web::ServiceConfig) {
         web::scope("/api")
             .wrap(from_fn(auth_filter))
             .route("/game/{code}", web::post().to(start_game))
-            .route("/game/{code}", web::get().to(get_game_assets))
+            .route(
+                "/asset-groups/{code}",
+                web::get().to(get_asset_groups_by_code),
+            )
             .route("/game/session/{id}", web::patch().to(finalize_session))
             .route("/game/session/{id}", web::get().to(get_game_session)),
     );

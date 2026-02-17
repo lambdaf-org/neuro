@@ -1,7 +1,8 @@
-use serde::Deserialize;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+use crate::models::validate::Validate;
 
 #[derive(Deserialize, ToSchema)]
 pub struct LoginPayload {
@@ -9,11 +10,48 @@ pub struct LoginPayload {
     pub password: String,
 }
 
+impl Validate for LoginPayload {
+    fn validate(&self) -> Result<(), Vec<&'static str>> {
+        let mut errors = Vec::new();
+        if self.email.trim().is_empty() {
+            errors.push("email is required");
+        }
+        if self.password.is_empty() {
+            errors.push("password is required");
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct RegisterPayload {
     pub email: String,
     pub username: String,
     pub password: String,
+}
+
+impl Validate for RegisterPayload {
+    fn validate(&self) -> Result<(), Vec<&'static str>> {
+        let mut errors = Vec::new();
+        if self.email.trim().is_empty() {
+            errors.push("email is required");
+        }
+        if self.username.trim().is_empty() {
+            errors.push("username is required");
+        }
+        if self.password.is_empty() {
+            errors.push("password is required");
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
 }
 
 #[derive(Clone)]
