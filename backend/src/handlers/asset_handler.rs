@@ -1,7 +1,6 @@
 use actix_web::HttpResponse;
 use actix_web::web;
 use serde_json::json;
-use url::Url;
 
 use crate::errors::custom_errors::RepoError;
 use crate::models::app_state::AppState;
@@ -51,6 +50,40 @@ fn map_repo_error(err: RepoError, context: &str) -> HttpResponse {
             }))
         }
     }
+}
+
+/// Validates image_url field to allow both absolute and relative URLs
+/// 
+/// Returns true if the URL is valid:
+/// - Absolute URLs must start with http:// or https:// and have content after the protocol
+/// - Relative URLs must start with / (but not //) and have content after the slash
+/// 
+/// Returns false for:
+/// - Empty or whitespace-only strings
+/// - Protocol-only URLs (e.g., "http://", "https://")
+/// - Single slash ("/")
+/// - Protocol-relative URLs (e.g., "//example.com")
+/// - URLs without proper prefix (e.g., "example.com/path")
+fn is_valid_image_url(url: &str) -> bool {
+    let trimmed = url.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+    
+    // Check for absolute URLs (http:// or https://)
+    if let Some(after_protocol) = trimmed.strip_prefix("https://") {
+        return !after_protocol.is_empty();
+    }
+    if let Some(after_protocol) = trimmed.strip_prefix("http://") {
+        return !after_protocol.is_empty();
+    }
+    
+    // Check for relative URLs (must start with / but not //)
+    if trimmed.starts_with('/') && !trimmed.starts_with("//") {
+        return trimmed.len() > 1;
+    }
+    
+    false
 }
 
 pub async fn create_asset_group(
@@ -144,11 +177,11 @@ pub async fn create_game_asset(
     body: web::Json<CreateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
-    // Validate image_url is a valid URL
-    if Url::parse(&body.image_url).is_err() {
+    // Validate image_url format (allow both absolute and relative URLs)
+    if !is_valid_image_url(&body.image_url) {
         return HttpResponse::BadRequest().json(json!({
             "error": "validation_error",
-            "message": "image_url must be a valid URL"
+            "message": "image_url must be a valid absolute or relative URL"
         }));
     }
 
@@ -177,11 +210,11 @@ pub async fn update_game_asset(
     body: web::Json<UpdateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
-    // Validate image_url is a valid URL
-    if Url::parse(&body.image_url).is_err() {
+    // Validate image_url format (allow both absolute and relative URLs)
+    if !is_valid_image_url(&body.image_url) {
         return HttpResponse::BadRequest().json(json!({
             "error": "validation_error",
-            "message": "image_url must be a valid URL"
+            "message": "image_url must be a valid absolute or relative URL"
         }));
     }
 
@@ -203,5 +236,77 @@ pub async fn delete_game_asset(path: web::Path<i32>, state: web::Data<AppState>)
     match asset_repository::delete_game_asset(&state.sb_client, path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => map_repo_error(e, "game asset"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_valid_image_url_empty_string() {
+        assert!(!is_valid_image_url(""));
+    }
+
+    #[test]
+    fn test_is_valid_image_url_whitespace_only() {
+        assert!(!is_valid_image_url("   "));
+        assert!(!is_valid_image_url("\t"));
+        assert!(!is_valid_image_url("\n"));
+    }
+
+    #[test]
+    fn test_is_valid_image_url_valid_https() {
+        assert!(is_valid_image_url("https://example.com/image.png"));
+        assert!(is_valid_image_url("https://cdn.example.com/assets/test.jpg"));
+        assert!(is_valid_image_url("https://a.b"));
+    }
+
+    #[test]
+    fn test_is_valid_image_url_valid_http() {
+        assert!(is_valid_image_url("http://example.com/image.png"));
+        assert!(is_valid_image_url("http://localhost:3000/test.jpg"));
+    }
+
+    #[test]
+    fn test_is_valid_image_url_valid_relative() {
+        assert!(is_valid_image_url("/relative/path/image.png"));
+        assert!(is_valid_image_url("/assets/test.jpg"));
+        assert!(is_valid_image_url("/a"));
+    }
+
+    #[test]
+    fn test_is_valid_image_url_invalid_protocol_only() {
+        assert!(!is_valid_image_url("http://"));
+        assert!(!is_valid_image_url("https://"));
+    }
+
+    #[test]
+    fn test_is_valid_image_url_invalid_single_slash() {
+        assert!(!is_valid_image_url("/"));
+    }
+
+    #[test]
+    fn test_is_valid_image_url_invalid_no_protocol() {
+        assert!(!is_valid_image_url("example.com/image.png"));
+        assert!(!is_valid_image_url("www.example.com/image.png"));
+    }
+
+    #[test]
+    fn test_is_valid_image_url_protocol_relative() {
+        // Protocol-relative URLs are not supported
+        assert!(!is_valid_image_url("//example.com/image.png"));
+    }
+
+    #[test]
+    fn test_is_valid_image_url_with_query_params() {
+        assert!(is_valid_image_url("https://example.com/image.png?size=large"));
+        assert!(is_valid_image_url("/assets/image.png?v=123"));
+    }
+
+    #[test]
+    fn test_is_valid_image_url_with_fragment() {
+        assert!(is_valid_image_url("https://example.com/image.png#section"));
+        assert!(is_valid_image_url("/assets/image.png#top"));
     }
 }
