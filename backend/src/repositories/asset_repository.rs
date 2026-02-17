@@ -43,6 +43,7 @@ pub async fn get_game_assets(
         .map_err(|e| RepoError::ExtractionError(e.to_string()))
 }
 
+// TODO: This function is currently unused. Consider exposing it via a GET endpoint at /admin/asset-groups/{id}
 pub async fn get_asset_group_by_id(
     db: &SupabaseClient,
     id: i32,
