@@ -7,7 +7,6 @@ import { ApiError, login, saveSession } from '@/lib/auth-api'
 
 interface LoginFormState {
   email: string
-  username: string
   password: string
 }
 
@@ -15,7 +14,6 @@ const route = useRoute()
 
 const state = reactive<LoginFormState>({
   email: '',
-  username: '',
   password: '',
 })
 
@@ -30,7 +28,8 @@ function syncRouteState() {
   }
 
   if (route.query.registered === '1') {
-    successMessage.value = 'Account created. Sign in with your credentials.'
+    successMessage.value =
+      "If this email can be used, you'll receive a verification email. Check your inbox before signing in."
   }
 }
 
@@ -42,10 +41,6 @@ function validate(formState: Partial<LoginFormState>): FormError[] {
 
   if (!formState.email?.trim()) {
     errors.push({ name: 'email', message: 'Email is required.' })
-  }
-
-  if (!formState.username?.trim()) {
-    errors.push({ name: 'username', message: 'Username is required.' })
   }
 
   if (!formState.password) {
@@ -63,7 +58,6 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
   try {
     const session = await login({
       email: event.data.email.trim(),
-      username: event.data.username.trim(),
       password: event.data.password,
     })
 
@@ -72,7 +66,15 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
     successMessage.value = 'Authenticated. Access token has been stored in local storage.'
   } catch (error) {
     if (error instanceof ApiError) {
-      errorMessage.value = error.message
+      if (error.status === 403) {
+        errorMessage.value = 'Please verify your email first. Check your inbox for the verification link.'
+      } else if (error.status === 401) {
+        errorMessage.value = 'Invalid email or password.'
+      } else if (error.status === 429) {
+        errorMessage.value = 'Too many login attempts. Please wait and try again.'
+      } else {
+        errorMessage.value = error.message || 'Login failed. Please try again.'
+      }
     } else {
       errorMessage.value = 'Login failed. Please try again.'
     }
@@ -116,15 +118,6 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
               type="email"
               autocomplete="email"
               placeholder="you@example.com"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField name="username" label="Username" required>
-            <UInput
-              v-model="state.username"
-              autocomplete="username"
-              placeholder="yourhandle1"
               class="w-full"
             />
           </UFormField>
