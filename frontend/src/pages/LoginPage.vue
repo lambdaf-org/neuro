@@ -1,9 +1,11 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
-import { ApiError, login, saveSession } from '@/lib/auth'
+import { resolveAuthRedirect } from '@/lib/auth/navigation'
+import { ApiError, login } from '@/lib/auth'
+import { useAuthStore } from '@/stores/auth'
 
 interface LoginFormState {
   email: string
@@ -11,6 +13,8 @@ interface LoginFormState {
 }
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 
 const state = reactive<LoginFormState>({
   email: '',
@@ -27,10 +31,18 @@ function syncRouteState() {
     state.email = emailQuery
   }
 
+  if (route.query.loggedOut === '1') {
+    successMessage.value = 'You have been signed out.'
+    return
+  }
+
   if (route.query.registered === '1') {
     successMessage.value =
       "If this email can be used, you'll receive a verification email. Check your inbox before signing in."
+    return
   }
+
+  successMessage.value = ''
 }
 
 syncRouteState()
@@ -53,7 +65,6 @@ function validate(formState: Partial<LoginFormState>): FormError[] {
 async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
   isSubmitting.value = true
   errorMessage.value = ''
-  successMessage.value = ''
 
   try {
     const session = await login({
@@ -61,9 +72,10 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
       password: event.data.password,
     })
 
-    saveSession(session)
+    auth.signIn(session)
     state.password = ''
-    successMessage.value = 'Authenticated. Access token has been stored in local storage.'
+
+    await router.push(resolveAuthRedirect(route.query.redirect))
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.status === 403) {
@@ -107,7 +119,7 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
           v-if="successMessage"
           color="success"
           variant="soft"
-          title="Success"
+          title="Notice"
           :description="successMessage"
         />
 
