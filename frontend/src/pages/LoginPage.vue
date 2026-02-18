@@ -3,7 +3,7 @@ import { reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
-import { ApiError, login, saveSession } from '@/lib/auth-api'
+import { ApiError, login, saveSession } from '@/lib/auth'
 
 interface LoginFormState {
   email: string

@@ -3,7 +3,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
-import { ApiError, register } from '@/lib/auth-api'
+import { ApiError, register } from '@/lib/auth'
 
 interface RegisterFormState {
   email: string
