@@ -34,21 +34,26 @@ export class ApiError extends Error {
   }
 }
 
-function parseJson(rawBody: string): unknown {
+type ParseJsonResult = {
+  ok: boolean
+  value: unknown
+}
+
+function parseJson(rawBody: string): ParseJsonResult {
   try {
-    return JSON.parse(rawBody) as unknown
+    return { ok: true, value: JSON.parse(rawBody) as unknown }
   } catch {
-    return null
+    return { ok: false, value: null }
   }
 }
 
 function parseErrorMessage(rawBody: string, fallback: string): string {
   const parsed = parseJson(rawBody)
-  if (!parsed || typeof parsed !== 'object') {
+  if (!parsed.ok || !parsed.value || typeof parsed.value !== 'object') {
     return fallback
   }
 
-  const body = parsed as Record<string, unknown>
+  const body = parsed.value as Record<string, unknown>
   if (typeof body.error === 'string' && body.error.trim()) {
     return body.error
   }
@@ -84,8 +89,8 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
     return undefined as T
   }
 
-  if (parsedBody !== null) {
-    return parsedBody as T
+  if (parsedBody.ok) {
+    return parsedBody.value as T
   }
 
   return rawBody as T

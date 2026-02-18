@@ -26,18 +26,21 @@ const errorMessage = ref('')
 
 function getRegisterErrorMessage(error: ApiError): string {
   if (error.status === 409) {
-    return 'Username already taken.'
+    if (error.message.toLowerCase().includes('email')) {
+      return "If this email can be used, you'll receive a verification email."
+    }
+    return error.message || 'Username already taken.'
   }
 
   if (error.status === 400) {
-    return 'Please review the form fields and try again.'
+    return error.message || 'Please review the form fields and try again.'
   }
 
   if (error.status === 429) {
-    return 'Too many attempts. Please wait and try again.'
+    return error.message || 'Too many attempts. Please wait and try again.'
   }
 
-  return 'Registration failed. Please try again.'
+  return error.message || 'Registration failed. Please try again.'
 }
 
 function validate(formState: Partial<RegisterFormState>): FormError[] {
