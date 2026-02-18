@@ -3,10 +3,11 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
-import { ApiError, register } from '@/lib/auth-api'
+import { ApiError, register } from '@/lib/auth'
 
 interface RegisterFormState {
   email: string
+  username: string
   password: string
   confirmPassword: string
 }
@@ -15,6 +16,7 @@ const router = useRouter()
 
 const state = reactive<RegisterFormState>({
   email: '',
+  username: '',
   password: '',
   confirmPassword: '',
 })
@@ -22,11 +24,34 @@ const state = reactive<RegisterFormState>({
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 
+function getRegisterErrorMessage(error: ApiError): string {
+  if (error.status === 409) {
+    if (error.message.toLowerCase().includes('email')) {
+      return "If this email can be used, you'll receive a verification email."
+    }
+    return error.message || 'Username already taken.'
+  }
+
+  if (error.status === 400) {
+    return error.message || 'Please review the form fields and try again.'
+  }
+
+  if (error.status === 429) {
+    return error.message || 'Too many attempts. Please wait and try again.'
+  }
+
+  return error.message || 'Registration failed. Please try again.'
+}
+
 function validate(formState: Partial<RegisterFormState>): FormError[] {
   const errors: FormError[] = []
 
   if (!formState.email?.trim()) {
     errors.push({ name: 'email', message: 'Email is required.' })
+  }
+
+  if (!formState.username?.trim()) {
+    errors.push({ name: 'username', message: 'Username is required.' })
   }
 
   if (!formState.password) {
@@ -51,6 +76,7 @@ async function onSubmit(event: FormSubmitEvent<RegisterFormState>) {
   try {
     await register({
       email: event.data.email.trim(),
+      username: event.data.username.trim(),
       password: event.data.password,
     })
 
@@ -63,7 +89,7 @@ async function onSubmit(event: FormSubmitEvent<RegisterFormState>) {
     })
   } catch (error) {
     if (error instanceof ApiError) {
-      errorMessage.value = error.message
+      errorMessage.value = getRegisterErrorMessage(error)
     } else {
       errorMessage.value = 'Registration failed. Please try again.'
     }
@@ -99,6 +125,15 @@ async function onSubmit(event: FormSubmitEvent<RegisterFormState>) {
               type="email"
               autocomplete="email"
               placeholder="you@example.com"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField name="username" label="Username" required>
+            <UInput
+              v-model="state.username"
+              autocomplete="username"
+              placeholder="yourhandle1"
               class="w-full"
             />
           </UFormField>
