@@ -1,4 +1,4 @@
-﻿import type { NavigationGuard } from 'vue-router'
+import type { NavigationGuard } from 'vue-router'
 
 import { resolveAuthRedirect } from '@/lib/auth/navigation'
 import { useAuthStore } from '@/stores/auth'
