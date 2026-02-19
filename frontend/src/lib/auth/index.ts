@@ -31,17 +31,25 @@ function parseLoginBody(rawBody: string): LoginResponse {
 }
 
 export async function register(payload: RegisterPayload): Promise<void> {
-  await request<void>('/register', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  }, parseEmptyBody)
+  await request<void>(
+    '/register',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    parseEmptyBody,
+  )
 }
 
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
-  return request<LoginResponse>('/login', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  }, parseLoginBody)
+  return request<LoginResponse>(
+    '/login',
+    {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    },
+    parseLoginBody,
+  )
 }
 
 export function saveSession(session: LoginResponse): void {
@@ -56,12 +64,12 @@ export function saveSession(session: LoginResponse): void {
 }
 
 export function getSession(): StoredSession | null {
-  const raw = localStorage.getItem(SESSION_STORAGE_KEY)
-  if (!raw) {
-    return null
-  }
-
   try {
+    const raw = localStorage.getItem(SESSION_STORAGE_KEY)
+    if (!raw) {
+      return null
+    }
+
     const parsed: unknown = JSON.parse(raw)
     if (!isStoredSession(parsed)) {
       localStorage.removeItem(SESSION_STORAGE_KEY)
@@ -69,7 +77,12 @@ export function getSession(): StoredSession | null {
     }
     return parsed
   } catch {
-    localStorage.removeItem(SESSION_STORAGE_KEY)
+    // Handle both JSON parsing errors and storage access failures (SecurityError, etc.)
+    try {
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+    } catch {
+      // Ignore if we can't even access storage to clean up
+    }
     return null
   }
 }
