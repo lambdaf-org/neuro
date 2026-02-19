@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
@@ -65,6 +65,7 @@ function validate(formState: Partial<LoginFormState>): FormError[] {
 async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
   isSubmitting.value = true
   errorMessage.value = ''
+  successMessage.value = ''
 
   try {
     const session = await login({
