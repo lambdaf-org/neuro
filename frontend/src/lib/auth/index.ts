@@ -1,5 +1,5 @@
 import type { LoginPayload, LoginResponse, RegisterPayload, StoredSession } from './types'
-import { ApiError, parseJsonBody, request } from './http'
+import { ApiError, parseEmptyBody, parseJsonBody, request } from './http'
 import { isLoginResponse, isStoredSession } from './types'
 
 export { ApiError } from './http'
@@ -7,20 +7,6 @@ export type { LoginPayload, LoginResponse, RegisterPayload, StoredSession } from
 export { isLoginResponse, isStoredSession } from './types'
 
 const SESSION_STORAGE_KEY = 'neuro.session'
-
-function parseEmptyBody(rawBody: string): void {
-  if (!rawBody) {
-    return
-  }
-
-  // Some backends return an empty object for write operations.
-  const parsed = parseJsonBody(rawBody)
-  if (typeof parsed === 'object' && parsed !== null) {
-    return
-  }
-
-  throw new ApiError('Unexpected response from server.', 500)
-}
 
 function parseLoginBody(rawBody: string): LoginResponse {
   const parsed = parseJsonBody(rawBody)

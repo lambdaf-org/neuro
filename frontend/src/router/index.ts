@@ -32,6 +32,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/admin/assets',
+    name: 'admin-assets',
+    component: () => import('@/pages/AdminAssetsPage.vue'),
+    meta: { requiresAuth: true, requiresAdminUi: true },
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/',
   },

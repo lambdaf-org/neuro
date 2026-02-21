@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { useRoute, useRouter } from 'vue-router'
 
+import { isAdminUiEnabled } from '@/lib/config/featureFlags'
 import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
@@ -22,6 +23,9 @@ const items = computed<NavigationMenuItem[]>(() => [
     to: '/profile',
     active: route.path.startsWith('/profile'),
   },
+  ...(isAdminUiEnabled
+    ? [{ label: 'Admin', to: '/admin/assets', active: route.path.startsWith('/admin/assets') }]
+    : []),
 ])
 
 async function onLogout() {

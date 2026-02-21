@@ -76,6 +76,12 @@ PORT=8080
 ADMIN_API_ENABLED=true
 ```
 
+Create a `.env.local` file in the `frontend` directory with the following variable:
+
+```
+VITE_ADMIN_UI=true
+```
+
 ## Testing
 ```bash
 cd backend
