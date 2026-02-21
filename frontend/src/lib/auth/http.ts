@@ -66,7 +66,11 @@ function buildHeaders(init: RequestInit): HeadersInit {
   return headers
 }
 
-export async function request<T>(path: string, init: RequestInit, parse: ResponseParser<T>): Promise<T> {
+export async function request<T>(
+  path: string,
+  init: RequestInit,
+  parse: ResponseParser<T>,
+): Promise<T> {
   let response: Response
 
   try {
@@ -94,4 +98,21 @@ export function parseJsonBody(rawBody: string): unknown {
     throw new ApiError('Invalid JSON response from server.', 500)
   }
   return parsed.value
+}
+
+/**
+ * Parser for endpoints that return empty or object responses.
+ * Accepts empty body or valid JSON object, throws on unexpected formats.
+ */
+export function parseEmptyBody(rawBody: string): void {
+  if (!rawBody) {
+    return
+  }
+
+  const parsed = parseJsonBody(rawBody)
+  if (typeof parsed === 'object' && parsed !== null) {
+    return
+  }
+
+  throw new ApiError('Unexpected response from server.', 500)
 }
