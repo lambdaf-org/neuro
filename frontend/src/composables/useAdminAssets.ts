@@ -73,7 +73,7 @@ export function useAdminAssets() {
       auth.logout()
       void router.push({
         path: '/login',
-        query: { redirect: '/admin/assets', loggedOut: '1' },
+        query: { redirect: '/admin/assets', sessionExpired: '1' },
       })
     }
   }

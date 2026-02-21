@@ -7,12 +7,12 @@ import { useAuthStore } from '@/stores/auth'
 export const authGuard: NavigationGuard = (to) => {
   const auth = useAuthStore()
 
-  if (to.meta.requiresAdminUi && !isAdminUiEnabled) {
+  if (to.matched.some((r) => r.meta.requiresAdminUi) && !isAdminUiEnabled) {
     return '/'
   }
 
-  const requiresAuth = Boolean(to.meta.requiresAuth)
-  const guestOnly = Boolean(to.meta.guestOnly)
+  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
+  const guestOnly = to.matched.some((r) => r.meta.guestOnly)
 
   if (requiresAuth && !auth.isAuthenticated) {
     return {

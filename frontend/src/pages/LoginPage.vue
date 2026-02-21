@@ -24,6 +24,7 @@ const state = reactive<LoginFormState>({
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const warningMessage = ref('')
 
 function syncRouteState() {
   const emailQuery = route.query.email
@@ -31,18 +32,17 @@ function syncRouteState() {
     state.email = emailQuery
   }
 
+  successMessage.value = ''
+  warningMessage.value = ''
+
   if (route.query.loggedOut === '1') {
     successMessage.value = 'You have been signed out.'
-    return
-  }
-
-  if (route.query.registered === '1') {
+  } else if (route.query.sessionExpired === '1') {
+    warningMessage.value = 'Your session has expired. Please sign in again.'
+  } else if (route.query.registered === '1') {
     successMessage.value =
       "If this email can be used, you'll receive a verification email. Check your inbox before signing in."
-    return
   }
-
-  successMessage.value = ''
 }
 
 watch(() => route.query, syncRouteState, { immediate: true })
@@ -129,6 +129,14 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
           variant="soft"
           title="Notice"
           :description="successMessage"
+        />
+
+        <UAlert
+          v-if="warningMessage"
+          color="warning"
+          variant="soft"
+          title="Session expired"
+          :description="warningMessage"
         />
 
         <UForm :state="state" :validate="validate" class="space-y-4" @submit="onSubmit">
