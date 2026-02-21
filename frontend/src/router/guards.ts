@@ -1,13 +1,18 @@
 import type { NavigationGuard } from 'vue-router'
 
 import { resolveAuthRedirect } from '@/lib/auth/navigation'
+import { isAdminUiEnabled } from '@/lib/config/featureFlags'
 import { useAuthStore } from '@/stores/auth'
 
 export const authGuard: NavigationGuard = (to) => {
   const auth = useAuthStore()
 
-  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
-  const guestOnly = to.matched.some((r) => r.meta.guestOnly)
+  if (to.meta.requiresAdminUi && !isAdminUiEnabled) {
+    return '/'
+  }
+
+  const requiresAuth = Boolean(to.meta.requiresAuth)
+  const guestOnly = Boolean(to.meta.guestOnly)
 
   if (requiresAuth && !auth.isAuthenticated) {
     return {

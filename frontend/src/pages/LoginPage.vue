@@ -45,8 +45,7 @@ function syncRouteState() {
   successMessage.value = ''
 }
 
-syncRouteState()
-watch(() => route.query, syncRouteState)
+watch(() => route.query, syncRouteState, { immediate: true })
 
 function validate(formState: Partial<LoginFormState>): FormError[] {
   const errors: FormError[] = []
@@ -60,6 +59,22 @@ function validate(formState: Partial<LoginFormState>): FormError[] {
   }
 
   return errors
+}
+
+function getLoginErrorMessage(error: ApiError): string {
+  if (error.status === 403) {
+    return 'Please verify your email first. Check your inbox for the verification link.'
+  }
+
+  if (error.status === 401) {
+    return 'Invalid email or password.'
+  }
+
+  if (error.status === 429) {
+    return 'Too many login attempts. Please wait and try again.'
+  }
+
+  return error.message || 'Login failed. Please try again.'
 }
 
 async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
@@ -79,15 +94,7 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
     await router.push(resolveAuthRedirect(route.query.redirect))
   } catch (error) {
     if (error instanceof ApiError) {
-      if (error.status === 403) {
-        errorMessage.value = 'Please verify your email first. Check your inbox for the verification link.'
-      } else if (error.status === 401) {
-        errorMessage.value = 'Invalid email or password.'
-      } else if (error.status === 429) {
-        errorMessage.value = 'Too many login attempts. Please wait and try again.'
-      } else {
-        errorMessage.value = error.message || 'Login failed. Please try again.'
-      }
+      errorMessage.value = getLoginErrorMessage(error)
     } else {
       errorMessage.value = 'Login failed. Please try again.'
     }
