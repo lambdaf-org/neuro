@@ -31,20 +31,37 @@ import { PLAY_MODULES } from '@/lib/play/modules'
   animation: module-enter 320ms ease-out both;
 }
 
+/* Staggered animation for any number of children */
+.module-grid > *:nth-child(n + 2) {
+  animation-delay: calc((var(--stagger-index, 1)) * 45ms);
+}
+
 .module-grid > *:nth-child(2) {
-  animation-delay: 45ms;
+  --stagger-index: 1;
 }
-
 .module-grid > *:nth-child(3) {
-  animation-delay: 80ms;
+  --stagger-index: 2;
 }
-
 .module-grid > *:nth-child(4) {
-  animation-delay: 115ms;
+  --stagger-index: 3;
 }
-
 .module-grid > *:nth-child(5) {
-  animation-delay: 150ms;
+  --stagger-index: 4;
+}
+.module-grid > *:nth-child(6) {
+  --stagger-index: 5;
+}
+.module-grid > *:nth-child(7) {
+  --stagger-index: 6;
+}
+.module-grid > *:nth-child(8) {
+  --stagger-index: 7;
+}
+.module-grid > *:nth-child(9) {
+  --stagger-index: 8;
+}
+.module-grid > *:nth-child(10) {
+  --stagger-index: 9;
 }
 
 @keyframes module-enter {
