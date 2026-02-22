@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 import type { PlayModule } from '@/lib/play/modules'
@@ -9,31 +8,9 @@ const props = defineProps<{
 }>()
 
 const router = useRouter()
-const routeTarget = computed(() => `/play/${props.module.id}`)
-
-function isInteractiveTarget(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) {
-    return false
-  }
-
-  // Check if click is on an interactive child element (exclude role="link" to allow card clicks)
-  return Boolean(
-    target.closest(
-      'a, button, input, textarea, select, [role="button"], [data-interactive="true"]',
-    ),
-  )
-}
 
 function openModule(): void {
-  void router.push(routeTarget.value)
-}
-
-function onCardClick(event: MouseEvent): void {
-  if (isInteractiveTarget(event.target)) {
-    return
-  }
-
-  openModule()
+  void router.push(`/play/${props.module.id}`)
 }
 
 function onCardKeydown(event: KeyboardEvent): void {
@@ -42,7 +19,6 @@ function onCardKeydown(event: KeyboardEvent): void {
   }
 
   event.preventDefault()
-  event.stopPropagation()
   openModule()
 }
 </script>
@@ -52,7 +28,7 @@ function onCardKeydown(event: KeyboardEvent): void {
     class="play-module-tile group relative h-full cursor-pointer rounded-xl border border-default/50 bg-elevated/40 p-5 backdrop-blur-sm transition-all"
     tabindex="0"
     role="link"
-    @click="onCardClick"
+    @click="openModule"
     @keydown="onCardKeydown"
   >
     <div class="space-y-4">
@@ -70,12 +46,6 @@ function onCardKeydown(event: KeyboardEvent): void {
       <div class="space-y-2">
         <h2 class="text-lg font-semibold text-highlighted">{{ module.name }}</h2>
         <p class="text-sm leading-6 text-toned">{{ module.description }}</p>
-      </div>
-
-      <div class="pt-2">
-        <UButton block :to="routeTarget" color="primary" variant="soft" data-interactive="true">
-          Open module
-        </UButton>
       </div>
     </div>
   </div>
