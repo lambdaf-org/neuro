@@ -9,7 +9,11 @@ const route = useRoute()
 
 const gameId = computed(() => {
   const raw = route.params.gameId
-  return typeof raw === 'string' ? raw : ''
+  if (typeof raw === 'string') {
+    return raw
+  }
+  // Handle array case (edge case in Vue Router)
+  return Array.isArray(raw) ? raw[0] || '' : ''
 })
 
 const selectedModule = computed(() => findPlayModuleById(gameId.value))

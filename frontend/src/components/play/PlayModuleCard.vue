@@ -28,6 +28,7 @@ function onCardKeydown(event: KeyboardEvent): void {
     class="play-module-tile group relative h-full cursor-pointer rounded-xl border border-default/50 bg-elevated/40 p-5 backdrop-blur-sm transition-all"
     tabindex="0"
     role="link"
+    :aria-label="`Open ${module.name} module`"
     @click="openModule"
     @keydown="onCardKeydown"
   >
