@@ -66,3 +66,27 @@ pub async fn get_game_session(
         Err(e) => e.to_response(),
     }
 }
+
+pub async fn get_player_stats(
+    ext_data: web::ReqData<MiddlewareData>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    match game_repository::get_player_stats(&state.sb_client, ext_data.user_id).await {
+        Ok(stats) => HttpResponse::Ok().json(stats),
+        Err(e) => e.to_response(),
+    }
+}
+
+pub async fn get_recent_sessions(
+    path: web::Path<String>,
+    ext_data: web::ReqData<MiddlewareData>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    let game_code = path.into_inner();
+    match game_repository::get_recent_sessions(&state.sb_client, ext_data.user_id, &game_code, 10)
+        .await
+    {
+        Ok(rows) => HttpResponse::Ok().json(rows),
+        Err(e) => e.to_response(),
+    }
+}

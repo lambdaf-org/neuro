@@ -4,6 +4,8 @@ use uuid::Uuid;
 
 use crate::errors::custom_errors::RepoError;
 use crate::models::game::GameSession;
+use crate::models::game::LeaderboardEntry;
+use crate::models::game::PlayerStats;
 // TODO: Create enum for game codes
 pub async fn create_session(
     db: &SupabaseClient,
@@ -77,4 +79,48 @@ pub async fn get_session(db: &SupabaseClient, session_id: Uuid) -> Result<GameSe
         .ok_or(RepoError::NotFound(String::from("Session not found")))?;
 
     serde_json::from_value(row).map_err(|e| RepoError::ExtractionError(e.to_string()))
+}
+
+pub async fn get_player_stats(
+    db: &SupabaseClient,
+    user_id: Uuid,
+) -> Result<Vec<PlayerStats>, RepoError> {
+    let rows = db
+        .select("player_stats_view")
+        .eq("user_id", &user_id.to_string())
+        .order("game_code", true)
+        .execute()
+        .await
+        .map_err(|e| {
+            log::error!("Failed fetching player stats: {e}");
+            RepoError::ExtractionError(String::from("Failed fetching player stats"))
+        })?;
+
+    rows.into_iter()
+        .map(|r| serde_json::from_value(r).map_err(|e| RepoError::ExtractionError(e.to_string())))
+        .collect()
+}
+
+pub async fn get_recent_sessions(
+    db: &SupabaseClient,
+    user_id: Uuid,
+    game_code: &str,
+    limit: usize,
+) -> Result<Vec<LeaderboardEntry>, RepoError> {
+    let rows = db
+        .select("leaderboard_view")
+        .eq("user_id", &user_id.to_string())
+        .eq("game_code", game_code)
+        .order("completed_at", false)
+        .limit(limit)
+        .execute()
+        .await
+        .map_err(|e| {
+            log::error!("Failed fetching recent sessions: {e}");
+            RepoError::ExtractionError(String::from("Failed fetching recent sessions"))
+        })?;
+
+    rows.into_iter()
+        .map(|r| serde_json::from_value(r).map_err(|e| RepoError::ExtractionError(e.to_string())))
+        .collect()
 }
