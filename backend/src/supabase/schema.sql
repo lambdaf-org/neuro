@@ -25,6 +25,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- BACKFILL EXISTING AUTH USERS INTO PROFILES
+INSERT INTO public.profiles (id, username)
+SELECT
+    u.id,
+    COALESCE(
+        u.raw_user_meta_data->>'display_name',
+        'user_' || LEFT(u.id::text, 8)
+    )
+FROM auth.users u
+LEFT JOIN public.profiles p ON p.id = u.id
+WHERE p.id IS NULL;
+
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
