@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS public.game_sessions CASCADE;
 DROP TABLE IF EXISTS public.game_events CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+DROP VIEW IF EXISTS public.leaderboard_view;
 
 -- PROFILES
 CREATE TABLE public.profiles (
@@ -75,3 +76,17 @@ CREATE INDEX idx_assets_group   ON public.game_assets(group_id);
 -- Ensure at most one correct asset per group
 CREATE UNIQUE INDEX idx_one_correct_per_group ON public.game_assets(group_id) WHERE is_correct = true;
 
+CREATE VIEW public.leaderboard_view AS
+SELECT
+    gs.game_code,
+    gs.score,
+    gs.completed_at,
+    p.id AS user_id,
+    p.username
+FROM public.game_sessions gs
+JOIN public.profiles p ON p.id = gs.user_id
+WHERE gs.status = 'completed' AND gs.score IS NOT NULL;
+
+CREATE INDEX idx_sessions_leaderboard
+    ON public.game_sessions(game_code, score DESC)
+    WHERE status = 'completed' AND score IS NOT NULL;

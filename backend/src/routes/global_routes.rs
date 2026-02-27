@@ -22,8 +22,8 @@ use actix_web::middleware::Next;
 use actix_web::middleware::from_fn;
 use actix_web::web;
 use game_handler::finalize_session;
+use game_handler::get_game_leaderboard;
 use game_handler::start_game;
-
 use log::error;
 
 pub fn init_admin_scope(cfg: &mut web::ServiceConfig) {
@@ -49,11 +49,12 @@ pub fn init_api_scope(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api")
             .wrap(from_fn(auth_filter))
-            .route("/game/{code}", web::post().to(start_game))
             .route(
                 "/asset-groups/{code}",
                 web::get().to(get_asset_groups_by_code),
             )
+            .route("/game/{code}", web::post().to(start_game))
+            .route("/game/{code}", web::get().to(get_game_leaderboard))
             .route("/game/session/{id}", web::patch().to(finalize_session))
             .route("/game/session/{id}", web::get().to(get_game_session)),
     );
