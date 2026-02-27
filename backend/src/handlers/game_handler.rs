@@ -10,11 +10,11 @@ use crate::models::validate::Validate;
 use crate::repositories::game_repository;
 
 pub async fn start_game(
-    path: web::Path<String>,
+    code: web::Path<String>,
     ext_data: web::ReqData<MiddlewareData>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
-    match game_repository::create_session(&state.sb_client, ext_data.user_id, path.into_inner())
+    match game_repository::create_session(&state.sb_client, ext_data.user_id, code.into_inner())
         .await
     {
         Ok(id) => HttpResponse::Created().json(json!({"id": id})),
@@ -23,7 +23,7 @@ pub async fn start_game(
 }
 
 pub async fn finalize_session(
-    path: web::Path<Uuid>,
+    id: web::Path<Uuid>,
     body: web::Json<FinalizeSessionReq>,
     ext_data: web::ReqData<MiddlewareData>,
     state: web::Data<AppState>,
@@ -32,7 +32,7 @@ pub async fn finalize_session(
         return HttpResponse::BadRequest().json(json!({"errors": errors}));
     }
 
-    let session_id = path.into_inner();
+    let session_id = id.into_inner();
 
     // Ensure the session belongs to the authenticated user before finalizing
     let session = match game_repository::get_session(&state.sb_client, session_id).await {
