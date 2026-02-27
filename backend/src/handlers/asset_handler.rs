@@ -9,6 +9,16 @@ use crate::models::assets::{
 use crate::models::validate::Validate;
 use crate::repositories::asset_repository;
 
+#[utoipa::path(
+    post,
+    path = "/admin/asset-groups",
+    request_body = CreateAssetGroupReq,
+    responses(
+        (status = 201, description = "Asset group created", body = Object),
+        (status = 400, description = "Validation error"),
+    ),
+    tag = "assets",
+)]
 pub async fn create_asset_group(
     body: web::Json<CreateAssetGroupReq>,
     state: web::Data<AppState>,
@@ -23,6 +33,14 @@ pub async fn create_asset_group(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/admin/asset-groups",
+    responses(
+        (status = 200, description = "All asset groups with assets"),
+    ),
+    tag = "assets",
+)]
 pub async fn list_asset_groups(state: web::Data<AppState>) -> HttpResponse {
     // TODO: Refine with a join to one shot this (inefficient because O(N + 1))
     let mut groups = match asset_repository::get_asset_groups(&state.sb_client).await {
@@ -39,6 +57,17 @@ pub async fn list_asset_groups(state: web::Data<AppState>) -> HttpResponse {
 }
 
 // TODO: Randomize when fetching
+#[utoipa::path(
+    get,
+    path = "/api/asset-groups/{code}",
+    params(
+        ("code" = String, Path, description = "Game code"),
+    ),
+    responses(
+        (status = 200, description = "Asset groups for game code"),
+    ),
+    tag = "assets",
+)]
 pub async fn get_asset_groups_by_code(
     path: web::Path<String>,
     state: web::Data<AppState>,
@@ -62,6 +91,19 @@ pub async fn get_asset_groups_by_code(
     HttpResponse::Ok().json(asset_group)
 }
 
+#[utoipa::path(
+    put,
+    path = "/admin/asset-groups/{id}",
+    params(
+        ("id" = i32, Path, description = "id"),
+    ),
+    request_body = UpdateAssetGroupReq,
+    responses(
+        (status = 200, description = "Asset group updated"),
+        (status = 400, description = "Validation error"),
+    ),
+    tag = "assets",
+)]
 pub async fn update_asset_group(
     path: web::Path<i32>,
     body: web::Json<UpdateAssetGroupReq>,
@@ -83,12 +125,34 @@ pub async fn update_asset_group(
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/admin/asset-groups/{id}",
+    params(
+        ("id" = i32, Path, description = "id"),
+    ),
+    responses(
+        (status = 204, description = "Asset group deleted"),
+    ),
+    tag = "assets",
+)]
 pub async fn delete_asset_group(path: web::Path<i32>, state: web::Data<AppState>) -> HttpResponse {
     match asset_repository::delete_asset_group(&state.sb_client, path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => e.to_response(),
     }
 }
+
+#[utoipa::path(
+    post,
+    path = "/admin/game-assets",
+    request_body = CreateGameAssetReq,
+    responses(
+        (status = 201, description = "Game asset created", body = Object),
+        (status = 400, description = "Validation error"),
+    ),
+    tag = "assets",
+)]
 
 pub async fn create_game_asset(
     body: web::Json<CreateGameAssetReq>,
@@ -111,6 +175,17 @@ pub async fn create_game_asset(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/admin/game-assets/{group_id}",
+    params(
+        ("group_id" = i32, Path, description = "group_id"),
+    ),
+    responses(
+        (status = 200, description = "Game assets for group"),
+    ),
+    tag = "assets",
+)]
 pub async fn list_game_assets(path: web::Path<i32>, state: web::Data<AppState>) -> HttpResponse {
     match asset_repository::get_game_assets(&state.sb_client, path.into_inner()).await {
         Ok(assets) => HttpResponse::Ok().json(assets),
@@ -118,6 +193,19 @@ pub async fn list_game_assets(path: web::Path<i32>, state: web::Data<AppState>) 
     }
 }
 
+#[utoipa::path(
+    put,
+    path = "/admin/game-assets/{id}",
+    params(
+        ("id" = i32, Path, description = "id"),
+    ),
+    request_body = UpdateGameAssetReq,
+    responses(
+        (status = 200, description = "Game asset updated"),
+        (status = 400, description = "Validation error"),
+    ),
+    tag = "assets",
+)]
 pub async fn update_game_asset(
     path: web::Path<i32>,
     body: web::Json<UpdateGameAssetReq>,
@@ -140,6 +228,17 @@ pub async fn update_game_asset(
     }
 }
 
+#[utoipa::path(
+    delete,
+    path = "/admin/game-assets/{id}",
+    params(
+        ("id" = i32, Path, description = "id"),
+    ),
+    responses(
+        (status = 204, description = "Game asset deleted"),
+    ),
+    tag = "assets",
+)]
 pub async fn delete_game_asset(path: web::Path<i32>, state: web::Data<AppState>) -> HttpResponse {
     match asset_repository::delete_game_asset(&state.sb_client, path.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),

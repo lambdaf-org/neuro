@@ -1,5 +1,30 @@
 use std::env;
 
+use crate::models::assets::{
+    CreateAssetGroupReq, CreateGameAssetReq, UpdateAssetGroupReq, UpdateGameAssetReq,
+};
+use crate::models::game::{FinalizeSessionReq, GameSession, LeaderboardEntry};
+use crate::models::user::{LoginPayload, LoginRes, RegisterPayload};
+use utoipa::Modify;
+use utoipa::OpenApi;
+use utoipa::openapi::security::ApiKey;
+use utoipa::openapi::security::ApiKeyValue;
+use utoipa::openapi::security::SecurityScheme;
+use utoipa_swagger_ui::SwaggerUi;
+use crate::handlers::game_handler::__path_start_game;
+use crate::handlers::game_handler::__path_finalize_session;
+use crate::handlers::game_handler::__path_get_game_session;
+use crate::handlers::user_handler::__path_login;
+use crate::handlers::user_handler::__path_register;
+use crate::handlers::asset_handler::__path_list_game_assets;
+use crate::handlers::asset_handler::__path_create_game_asset;
+use crate::handlers::asset_handler::__path_delete_game_asset;
+use crate::handlers::asset_handler::__path_list_asset_groups;
+use crate::handlers::asset_handler::__path_update_game_asset;
+use crate::handlers::asset_handler::__path_delete_asset_group;
+use crate::handlers::asset_handler::__path_get_asset_groups_by_code;
+use crate::handlers::asset_handler::__path_create_asset_group;
+use crate::handlers::asset_handler::__path_update_asset_group;
 use self::models::app_state::AppState;
 use self::routes::global_routes;
 use actix_web::App;
@@ -25,6 +50,58 @@ pub mod tests;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    struct SecuritySchemas;
+    impl Modify for SecuritySchemas {
+        fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+            let components = openapi.components.as_mut().unwrap();
+            let value = ApiKeyValue::with_description("Authorization", "Bearer ey...");
+            let scheme = SecurityScheme::ApiKey(ApiKey::Header(value));
+            components.add_security_scheme("Authorization", scheme);
+        }
+    }
+    #[derive(OpenApi)]
+    #[openapi(
+        paths(
+            start_game,
+            finalize_session,
+            get_game_session,
+            login,
+            register,
+            list_game_assets,
+            create_game_asset,
+            delete_game_asset,
+            list_asset_groups,
+            update_game_asset,
+            delete_asset_group,
+            get_asset_groups_by_code,
+            create_asset_group,
+            update_asset_group,
+            register,
+            login
+        ),
+        components(schemas(
+            RegisterPayload, 
+            LoginPayload, 
+            LoginRes,
+            FinalizeSessionReq, 
+            GameSession, 
+            LeaderboardEntry,
+            CreateAssetGroupReq,
+            UpdateAssetGroupReq,
+            CreateGameAssetReq, 
+            UpdateGameAssetReq,
+        )),
+        security(("Authorization" = [])),
+        modifiers(&SecuritySchemas),
+        tags(
+            (name = "user", description = "Authentication"),
+            (name = "games", description = "Game sessions and leaderboards"),
+            (name = "assets", description = "Asset management"),
+        )
+    )]
+    struct ApiDoc;
+    let openapi = ApiDoc::openapi();
+
     dotenv().ok();
     let address = setup_address();
     info!("Running at http://{}:{}", address.0, address.1);
@@ -35,6 +112,9 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
+            .service(
+                SwaggerUi::new("/swagger/{_:.*}").url("/api-doc/openapi.json", openapi.clone()),
+            )
             .wrap(Logger::default())
             .app_data(app_state.clone())
             .configure(global_routes::init_admin_scope)
