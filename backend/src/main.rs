@@ -76,8 +76,6 @@ async fn main() -> std::io::Result<()> {
             get_asset_groups_by_code,
             create_asset_group,
             update_asset_group,
-            register,
-            login
         ),
         components(schemas(
             RegisterPayload, 
