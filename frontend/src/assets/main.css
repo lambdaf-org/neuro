@@ -10,7 +10,7 @@
   --ui-container: 76rem;
 
   --ui-primary: #3b82f6;
-  --ui-secondary: #8b5cf6;
+  --ui-secondary: #6366f1;
   --ui-success: #10b981;
   --ui-warning: #f59e0b;
 
@@ -33,7 +33,7 @@
 
 .dark {
   --ui-primary: #06b6d4;
-  --ui-secondary: #a78bfa;
+  --ui-secondary: #8ea0ff;
   --ui-success: #34d399;
   --ui-warning: #fbbf24;
 
