@@ -6,6 +6,7 @@ DROP TABLE IF EXISTS public.game_sessions CASCADE;
 DROP TABLE IF EXISTS public.game_events CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+DROP VIEW IF EXISTS public.player_stats_view;
 
 -- PROFILES
 CREATE TABLE public.profiles (
@@ -82,6 +83,19 @@ CREATE INDEX idx_sessions_user  ON public.game_sessions(user_id);
 CREATE INDEX idx_anticheat_user ON public.anticheat_log(user_id);
 CREATE INDEX idx_groups_game    ON public.asset_groups(game_code);
 CREATE INDEX idx_assets_group   ON public.game_assets(group_id);
+
+CREATE VIEW public.player_stats_view AS
+SELECT
+    gs.user_id,
+    gs.game_code,
+    p.username,
+    MAX(gs.score) AS best_score,
+    AVG(gs.score) AS avg_score,
+    COUNT(*) AS session_count
+FROM public.game_sessions gs
+JOIN public.profiles p ON p.id = gs.user_id
+WHERE gs.status = 'completed' AND gs.score IS NOT NULL
+GROUP BY gs.user_id, gs.game_code, p.username;
 
 -- CONSTRAINTS
 -- Ensure at most one correct asset per group

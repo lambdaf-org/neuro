@@ -1,7 +1,7 @@
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-
 use crate::models::validate::Validate;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
+use uuid::Uuid;
 
 #[derive(Deserialize)]
 pub struct FinalizeSessionReq {
@@ -33,4 +33,45 @@ pub struct GameSession {
     pub started_at: String,
     // Can be empty since game can be in progress
     pub completed_at: Option<String>,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct LeaderboardEntry {
+    pub user_id: Uuid,
+    pub username: String,
+    pub score: f64,
+    pub completed_at: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct PlayerStats {
+    pub user_id: Uuid,
+    pub username: String,
+    pub game_code: String,
+    pub best_score: f64,
+    pub avg_score: f64,
+    pub session_count: i64,
+}
+
+impl Validate for PlayerStats {
+    fn validate(&self) -> Result<(), Vec<&'static str>> {
+        let mut errors = Vec::new();
+        if self.game_code.trim().is_empty() {
+            errors.push("game_code is required");
+        }
+        if self.best_score < 0.0 {
+            errors.push("best_score must be non-negative");
+        }
+        if self.avg_score < 0.0 {
+            errors.push("avg_score must be non-negative");
+        }
+        if self.session_count < 0 {
+            errors.push("session_count must be non-negative");
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
 }
