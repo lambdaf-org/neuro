@@ -4,19 +4,18 @@ use uuid::Uuid;
 
 use crate::errors::custom_errors::RepoError;
 use crate::models::game::GameSession;
-
 // TODO: Create enum for game codes
 pub async fn create_session(
     db: &SupabaseClient,
     user_id: Uuid,
     game_code: String,
-) -> Result<String, RepoError> {
+) -> Result<Uuid, RepoError> {
     let db_result = db
         .insert(
             "game_sessions",
             json!({
-                    "user_id": user_id,
-                    "game_code": game_code,
+                "user_id": user_id,
+                "game_code": game_code,
             }),
         )
         .await;
@@ -26,7 +25,12 @@ pub async fn create_session(
         RepoError::InsertionError(String::from("Failed inserting game"))
     })?;
 
-    Ok(handled_result)
+    let id: Uuid = serde_json::from_str(&handled_result).map_err(|e| {
+        log::error!("Invalid UUID returned from DB: {e}");
+        RepoError::InsertionError(String::from("Invalid session id"))
+    })?;
+
+    Ok(id)
 }
 
 pub async fn finalize_session(
