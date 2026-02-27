@@ -66,3 +66,15 @@ pub async fn get_game_session(
         Err(e) => e.to_response(),
     }
 }
+
+pub async fn get_game_leaderboard(
+    path: web::Path<String>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    let game_code = path.into_inner();
+
+    match game_repository::get_leaderboard(&state.sb_client, &game_code).await {
+        Ok(rows) => HttpResponse::Ok().json(rows),
+        Err(e) => e.to_response(),
+    }
+}

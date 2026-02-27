@@ -34,3 +34,11 @@ pub struct GameSession {
     // Can be empty since game can be in progress
     pub completed_at: Option<String>,
 }
+
+#[derive(serde::Deserialize, serde::Serialize)]
+pub struct LeaderboardEntry {
+    pub user_id: Uuid,
+    pub username: String,
+    pub score: f64,
+    pub completed_at: String,
+}
