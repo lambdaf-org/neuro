@@ -96,7 +96,7 @@ const resultPreview = computed(() => {
                 >
                   Stop
                 </UButton>
-                <UButton color="neutral" variant="ghost" @click="resetGame">Reset</UButton>
+                <UButton color="neutral" variant="ghost" :disabled="isBusy" @click="resetGame">Reset</UButton>
               </div>
             </div>
 
@@ -112,7 +112,7 @@ const resultPreview = computed(() => {
             v-if="errorMessage"
             color="error"
             variant="soft"
-            title="Submit failed"
+            title="Action failed"
             :description="errorMessage"
           />
 
@@ -145,3 +145,4 @@ const resultPreview = computed(() => {
   line-height: 1.4;
 }
 </style>
+
