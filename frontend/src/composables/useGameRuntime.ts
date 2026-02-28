@@ -44,6 +44,7 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
   let countdownHandle: ReturnType<typeof setInterval> | null = null
   let animationHandle: number | null = null
   let runningStartAt: number | null = null
+  let lifecycleVersion = 0
 
   function getAccessTokenOrThrow(): string {
     const accessToken = auth.accessToken
@@ -52,6 +53,10 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
     }
 
     return accessToken
+  }
+
+  function isStale(version: number): boolean {
+    return version !== lifecycleVersion
   }
 
   function clearSession(): void {
@@ -116,6 +121,8 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
       return
     }
 
+    const runVersion = ++lifecycleVersion
+
     clearTimers()
     clearSession()
 
@@ -128,14 +135,29 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
 
     isStarting.value = true
     try {
-      sessionId.value = await startGameSession(gameCode, getAccessTokenOrThrow())
+      const createdSessionId = await startGameSession(gameCode, getAccessTokenOrThrow())
+      if (isStale(runVersion)) {
+        return
+      }
+
+      sessionId.value = createdSessionId
     } catch (error) {
+      if (isStale(runVersion)) {
+        return
+      }
+
       state.value = 'finished'
       sessionId.value = null
       errorMessage.value = getErrorMessage(error, 'Could not start game session.')
       return
     } finally {
-      isStarting.value = false
+      if (!isStale(runVersion)) {
+        isStarting.value = false
+      }
+    }
+
+    if (isStale(runVersion)) {
+      return
     }
 
     setState('countdown')
@@ -184,21 +206,36 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
       return
     }
 
+    const runVersion = lifecycleVersion
     isSubmitting.value = true
     try {
       await submitGameResult(currentSessionId, result, getAccessTokenOrThrow())
+      if (isStale(runVersion)) {
+        return
+      }
+
       errorMessage.value = ''
     } catch (error) {
+      if (isStale(runVersion)) {
+        return
+      }
+
       errorMessage.value = getErrorMessage(error, 'Could not submit game result.')
     } finally {
-      isSubmitting.value = false
+      if (!isStale(runVersion)) {
+        isSubmitting.value = false
+      }
     }
   }
 
   function resetGame(): void {
+    lifecycleVersion += 1
+
     clearTimers()
     clearSession()
 
+    isStarting.value = false
+    isSubmitting.value = false
     runningStartAt = null
     state.value = 'finished'
     stateHistory.value = []
@@ -208,7 +245,10 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
     lastResult.value = null
   }
 
-  onScopeDispose(clearTimers)
+  onScopeDispose(() => {
+    lifecycleVersion += 1
+    clearTimers()
+  })
 
   const isBusy = computed(() => isStarting.value || isSubmitting.value)
   const canStart = computed(() => state.value === 'finished' && !isBusy.value)

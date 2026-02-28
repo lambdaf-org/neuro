@@ -23,7 +23,8 @@ const headline = computed(() => {
     return 'Finished'
   }
 
-  return 'Ready'
+  const _state: never = props.state
+  return _state
 })
 
 const detail = computed(() => {
@@ -39,7 +40,8 @@ const detail = computed(() => {
     return `${props.formattedElapsed} (${props.elapsedMs} ms)`
   }
 
-  return ''
+  const _state: never = props.state
+  return _state
 })
 </script>
 
