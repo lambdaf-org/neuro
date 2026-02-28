@@ -1,9 +1,10 @@
 import { computed, onScopeDispose, ref, toValue, type MaybeRefOrGetter } from 'vue'
 
+import { ApiError } from '@/lib/auth'
 import { createGameResult, type GameResult, type GameState } from '@/lib/play/result'
+import { startGameSession, submitGameResult } from '@/lib/play/session'
 import { getErrorMessage } from '@/lib/utils/errorHandling'
-
-import { useGameSubmit } from './useGameSubmit'
+import { useAuthStore } from '@/stores/auth'
 
 const DEFAULT_COUNTDOWN_SECONDS = 3
 
@@ -26,8 +27,12 @@ function buildDummyScore(durationMs: number): number {
 }
 
 export function useGameRuntime(options: UseGameRuntimeOptions) {
-  const submit = useGameSubmit()
+  const auth = useAuthStore()
   const countdownSeconds = toCountdownSeconds(options.countdownSeconds)
+
+  const sessionId = ref<string | null>(null)
+  const isStarting = ref(false)
+  const isSubmitting = ref(false)
 
   const state = ref<GameState>('finished')
   const stateHistory = ref<GameState[]>([])
@@ -39,6 +44,19 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
   let countdownHandle: ReturnType<typeof setInterval> | null = null
   let animationHandle: number | null = null
   let runningStartAt: number | null = null
+
+  function getAccessTokenOrThrow(): string {
+    const accessToken = auth.accessToken
+    if (!accessToken) {
+      throw new ApiError('No active session. Please sign in again.', 401)
+    }
+
+    return accessToken
+  }
+
+  function clearSession(): void {
+    sessionId.value = null
+  }
 
   function clearCountdown(): void {
     if (countdownHandle !== null) {
@@ -99,7 +117,7 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
     }
 
     clearTimers()
-    submit.resetSession()
+    clearSession()
 
     state.value = 'finished'
     stateHistory.value = []
@@ -108,12 +126,16 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
     lastResult.value = null
     errorMessage.value = ''
 
+    isStarting.value = true
     try {
-      await submit.startSession(gameCode)
+      sessionId.value = await startGameSession(gameCode, getAccessTokenOrThrow())
     } catch (error) {
       state.value = 'finished'
+      sessionId.value = null
       errorMessage.value = getErrorMessage(error, 'Could not start game session.')
       return
+    } finally {
+      isStarting.value = false
     }
 
     setState('countdown')
@@ -156,17 +178,26 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
 
     lastResult.value = result
 
+    const currentSessionId = sessionId.value
+    if (!currentSessionId) {
+      errorMessage.value = 'No active game session to submit.'
+      return
+    }
+
+    isSubmitting.value = true
     try {
-      await submit.submitResult(result)
+      await submitGameResult(currentSessionId, result, getAccessTokenOrThrow())
       errorMessage.value = ''
     } catch (error) {
       errorMessage.value = getErrorMessage(error, 'Could not submit game result.')
+    } finally {
+      isSubmitting.value = false
     }
   }
 
   function resetGame(): void {
     clearTimers()
-    submit.resetSession()
+    clearSession()
 
     runningStartAt = null
     state.value = 'finished'
@@ -179,9 +210,9 @@ export function useGameRuntime(options: UseGameRuntimeOptions) {
 
   onScopeDispose(clearTimers)
 
-  const isBusy = computed(() => submit.isStarting.value || submit.isSubmitting.value)
+  const isBusy = computed(() => isStarting.value || isSubmitting.value)
   const canStart = computed(() => state.value === 'finished' && !isBusy.value)
-  const canStop = computed(() => state.value === 'running' && !submit.isSubmitting.value)
+  const canStop = computed(() => state.value === 'running' && !isSubmitting.value)
   const formattedElapsed = computed(() => `${(elapsedMs.value / 1000).toFixed(3)} s`)
 
   return {
