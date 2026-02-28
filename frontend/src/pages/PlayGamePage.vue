@@ -34,7 +34,7 @@ const {
   stopGame,
   resetGame,
 } = useGameRuntime({
-  gameCode: computed(() => selectedModule.value?.id ?? ''),
+  gameCode: computed(() => selectedModule.value?.chcCode.toLowerCase() ?? ''),
 })
 
 watch(gameId, () => {
