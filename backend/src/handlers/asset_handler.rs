@@ -40,13 +40,13 @@ pub async fn list_asset_groups(state: web::Data<AppState>) -> HttpResponse {
 
 // TODO: Randomize when fetching
 pub async fn get_asset_groups_by_code(
-    path: web::Path<String>,
+    code: web::Path<String>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
     // TODO: Refine with a join to one shot this (inefficient because O(N + 1))
     // TODO: Do not expose the true answer on game asset fetch since players may cheat
     let mut asset_group =
-        match asset_repository::get_asset_groups_by_code(&state.sb_client, path.into_inner()).await
+        match asset_repository::get_asset_groups_by_code(&state.sb_client, code.into_inner()).await
         {
             Ok(v) => v,
             Err(e) => return e.to_response(),
@@ -63,7 +63,7 @@ pub async fn get_asset_groups_by_code(
 }
 
 pub async fn update_asset_group(
-    path: web::Path<i32>,
+    id: web::Path<i32>,
     body: web::Json<UpdateAssetGroupReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
@@ -72,7 +72,7 @@ pub async fn update_asset_group(
     }
     match asset_repository::update_asset_group(
         &state.sb_client,
-        path.into_inner(),
+        id.into_inner(),
         &body.game_code,
         &body.label,
     )
@@ -83,8 +83,11 @@ pub async fn update_asset_group(
     }
 }
 
-pub async fn delete_asset_group(path: web::Path<i32>, state: web::Data<AppState>) -> HttpResponse {
-    match asset_repository::delete_asset_group(&state.sb_client, path.into_inner()).await {
+pub async fn delete_asset_group(
+    id: web::Path<i32>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    match asset_repository::delete_asset_group(&state.sb_client, id.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => e.to_response(),
     }
@@ -111,15 +114,18 @@ pub async fn create_game_asset(
     }
 }
 
-pub async fn list_game_assets(path: web::Path<i32>, state: web::Data<AppState>) -> HttpResponse {
-    match asset_repository::get_game_assets(&state.sb_client, path.into_inner()).await {
+pub async fn list_game_assets(
+    id: web::Path<i32>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    match asset_repository::get_game_assets(&state.sb_client, id.into_inner()).await {
         Ok(assets) => HttpResponse::Ok().json(assets),
         Err(e) => e.to_response(),
     }
 }
 
 pub async fn update_game_asset(
-    path: web::Path<i32>,
+    id: web::Path<i32>,
     body: web::Json<UpdateGameAssetReq>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
@@ -128,7 +134,7 @@ pub async fn update_game_asset(
     }
     match asset_repository::update_game_asset(
         &state.sb_client,
-        path.into_inner(),
+        id.into_inner(),
         &body.label,
         &body.image_url,
         body.is_correct,
@@ -140,8 +146,11 @@ pub async fn update_game_asset(
     }
 }
 
-pub async fn delete_game_asset(path: web::Path<i32>, state: web::Data<AppState>) -> HttpResponse {
-    match asset_repository::delete_game_asset(&state.sb_client, path.into_inner()).await {
+pub async fn delete_game_asset(
+    id: web::Path<i32>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    match asset_repository::delete_game_asset(&state.sb_client, id.into_inner()).await {
         Ok(_) => HttpResponse::NoContent().finish(),
         Err(e) => e.to_response(),
     }
