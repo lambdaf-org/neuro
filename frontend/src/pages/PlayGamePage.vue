@@ -1,148 +1,82 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 
-import { useGameRuntime } from '@/composables/useGameRuntime'
 import ProtectedNav from '@/components/ProtectedNav.vue'
-import GameTimerDisplay from '@/components/play/GameTimerDisplay.vue'
+import type { GameId } from '@/lib/play/modules'
 import { findPlayModuleById } from '@/lib/play/modules'
+
+/**
+ * Game component registry.
+ * To add a new game: create the component, then add one line here.
+ * PlayGamePage never needs to change again.
+ */
+const GAME_REGISTRY: Partial<Record<GameId, ReturnType<typeof defineAsyncComponent>>> = {
+  'reaction-time': defineAsyncComponent(() => import('@/components/play/ReactionTestGame.vue')),
+}
 
 const route = useRoute()
 
 const gameId = computed(() => {
   const raw = route.params.gameId
-  if (typeof raw === 'string') {
-    return raw
-  }
-  // Handle array case (edge case in Vue Router)
+  if (typeof raw === 'string') return raw
   return Array.isArray(raw) ? raw[0] || '' : ''
 })
 
 const selectedModule = computed(() => findPlayModuleById(gameId.value))
-
-const {
-  state,
-  countdownRemaining,
-  elapsedMs,
-  formattedElapsed,
-  canStart,
-  canStop,
-  isBusy,
-  errorMessage,
-  lastResult,
-  startGame,
-  stopGame,
-  resetGame,
-} = useGameRuntime({
-  gameCode: computed(() => selectedModule.value?.chcCode.toLowerCase() ?? ''),
-})
-
-watch(gameId, () => {
-  resetGame()
-})
-
-const resultPreview = computed(() => {
-  return lastResult.value ? JSON.stringify(lastResult.value, null, 2) : ''
-})
+const gameComponent = computed(() => GAME_REGISTRY[gameId.value as GameId] ?? null)
 </script>
 
 <template>
   <div class="min-h-svh">
     <ProtectedNav />
 
-    <main class="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6">
+    <main class="mx-auto w-full max-w-3xl px-4 py-8 sm:px-6">
       <div class="space-y-6">
-        <div class="flex items-center gap-4">
+        <!-- Page header -->
+        <div class="flex items-center gap-3">
           <UButton to="/play" variant="ghost" color="neutral" size="sm" icon="i-lucide-arrow-left">
             Back
           </UButton>
-          <div class="flex items-center gap-3" v-if="selectedModule">
+          <template v-if="selectedModule">
+            <span class="text-default/30">/</span>
             <UBadge color="primary" variant="soft" size="sm">{{ selectedModule.chcCode }}</UBadge>
-            <h1 class="text-xl font-semibold text-highlighted sm:text-2xl">
+            <h1 class="text-lg font-semibold text-highlighted">
               {{ selectedModule.name }}
             </h1>
-          </div>
+          </template>
         </div>
 
+        <!-- Module not found -->
         <UAlert
           v-if="!selectedModule"
           color="error"
           variant="soft"
           title="Module not found"
-          :description="`No module is registered for id '${gameId}'.`"
+          :description="`No module registered for '${gameId}'.`"
         />
 
+        <!-- Registered game component -->
+        <component
+          v-else-if="gameComponent"
+          :is="gameComponent"
+          :game-code="selectedModule.chcCode.toLowerCase()"
+        />
+
+        <!-- Module exists but no component registered yet -->
         <div
           v-else
-          class="game-container min-h-150 space-y-6 rounded-xl border border-default/50 bg-elevated/30 p-6 backdrop-blur-sm"
+          class="flex min-h-72 flex-col items-center justify-center gap-3 rounded-xl border border-default/50 bg-elevated/30 p-10 text-center backdrop-blur-sm"
         >
-          <div class="grid gap-4 md:grid-cols-[auto_1fr]">
-            <div class="space-y-3">
-              <div class="flex flex-wrap gap-2">
-                <UButton
-                  color="primary"
-                  :disabled="!canStart"
-                  :loading="isBusy"
-                  @click="startGame"
-                >
-                  Start
-                </UButton>
-                <UButton
-                  color="warning"
-                  variant="soft"
-                  :disabled="!canStop"
-                  :loading="isBusy"
-                  @click="stopGame"
-                >
-                  Stop
-                </UButton>
-                <UButton color="neutral" variant="ghost" :disabled="isBusy" @click="resetGame">Reset</UButton>
-              </div>
-            </div>
-
-            <GameTimerDisplay
-              :state="state"
-              :elapsed-ms="elapsedMs"
-              :countdown-remaining="countdownRemaining"
-              :formatted-elapsed="formattedElapsed"
-            />
+          <div
+            class="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-secondary/30 bg-secondary/10"
+          >
+            <UIcon :name="selectedModule.icon" class="h-6 w-6 text-secondary" />
           </div>
-
-          <UAlert
-            v-if="errorMessage"
-            color="error"
-            variant="soft"
-            title="Action failed"
-            :description="errorMessage"
-          />
-
-          <div class="space-y-2 rounded-xl border border-default/60 bg-muted/20 p-4">
-            <p class="text-sm text-toned">
-              Dummy game flow: <code>countdown -> running -> finished</code>. You can reuse
-              this directly for a reaction-time game by replacing the stop trigger and scoring logic.
-            </p>
-          </div>
-
-          <div v-if="lastResult" class="space-y-2">
-            <p class="text-sm font-medium text-highlighted">Standard Result Payload</p>
-            <pre class="result-preview">{{ resultPreview }}</pre>
-          </div>
+          <p class="font-semibold text-highlighted">{{ selectedModule.name }}</p>
+          <p class="text-sm text-toned">This module is coming soon.</p>
         </div>
       </div>
     </main>
   </div>
 </template>
-
-<style scoped>
-.result-preview {
-  max-height: 18rem;
-  overflow: auto;
-  border: 1px solid color-mix(in oklab, var(--ui-border) 70%, transparent);
-  border-radius: 0.75rem;
-  background: color-mix(in oklab, var(--ui-bg-elevated) 60%, transparent);
-  padding: 0.9rem;
-  font-size: 0.75rem;
-  line-height: 1.4;
-}
-</style>
-
