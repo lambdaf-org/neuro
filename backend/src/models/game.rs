@@ -1,13 +1,12 @@
+use crate::models::validate::Validate;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
-use crate::models::validate::Validate;
-
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct FinalizeSessionReq {
     pub score: f64,
 }
-
 impl Validate for FinalizeSessionReq {
     fn validate(&self) -> Result<(), Vec<&'static str>> {
         let mut errors = Vec::new();
@@ -22,7 +21,7 @@ impl Validate for FinalizeSessionReq {
     }
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct GameSession {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -33,4 +32,12 @@ pub struct GameSession {
     pub started_at: String,
     // Can be empty since game can be in progress
     pub completed_at: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct LeaderboardEntry {
+    pub user_id: Uuid,
+    pub username: String,
+    pub score: f64,
+    pub completed_at: String,
 }
