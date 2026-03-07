@@ -93,11 +93,11 @@ pub async fn finalize_session(
     security(("Authorization" = []))
 )]
 pub async fn get_game_session(
-    path: web::Path<Uuid>,
+    id: web::Path<Uuid>,
     ext_data: web::ReqData<MiddlewareData>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
-    match game_repository::get_session(&state.sb_client, path.into_inner()).await {
+    match game_repository::get_session(&state.sb_client, id.into_inner()).await {
         Ok(v) => {
             if v.user_id == ext_data.user_id {
                 HttpResponse::Ok().json(v)
