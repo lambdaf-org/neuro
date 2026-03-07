@@ -97,7 +97,7 @@ SELECT
     p.username
 FROM public.game_sessions gs
 JOIN public.profiles p ON p.id = gs.user_id
-WHERE gs.status = 'completed' AND gs.score IS NOT NULL;
+WHERE gs.status = 'completed' AND gs.score IS NOT NULL AND completed_at IS NOT NULL;
 
 CREATE INDEX idx_sessions_leaderboard
     ON public.game_sessions(game_code, score DESC)
