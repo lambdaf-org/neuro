@@ -17,9 +17,11 @@ use crate::repositories::game_repository;
     ),
     responses(
         (status = 201, description = "Session created", body = Object),
-        (status = 400, description = "Creation failed"),
+        (status = 422, description = "Operation failed", body = Object),
+        (status = 500, description = "Internal error", body = Object),
     ),
-    tag = "games"
+    tag = "games",
+    security(("Authorization" = []))
 )]
 pub async fn start_game(
     code: web::Path<String>,
@@ -43,10 +45,14 @@ pub async fn start_game(
     request_body = FinalizeSessionReq,
     responses(
         (status = 200, description = "Session finalized"),
-        (status = 400, description = "Validation or finalization error"),
+        (status = 400, description = "Validation error", body = Object),
         (status = 403, description = "Session belongs to another user"),
+        (status = 404, description = "Session not found", body = Object),
+        (status = 422, description = "Operation failed", body = Object),
+        (status = 500, description = "Internal error", body = Object),
     ),
-    tag = "games"
+    tag = "games",
+    security(("Authorization" = []))
 )]
 pub async fn finalize_session(
     id: web::Path<Uuid>,
@@ -78,10 +84,13 @@ pub async fn finalize_session(
         ("id" = Uuid, Path, example = "3fa85f64-5717-4562-b3fc-2c963f66afa6"),
     ),
     responses(
-        (status = 200, description = "Session details"),
+        (status = 200, description = "Session details", body = GameSession),
         (status = 403, description = "Session belongs to another user"),
+        (status = 404, description = "Session not found", body = Object),
+        (status = 500, description = "Internal error", body = Object),
     ),
-    tag = "games"
+    tag = "games",
+    security(("Authorization" = []))
 )]
 pub async fn get_game_session(
     path: web::Path<Uuid>,

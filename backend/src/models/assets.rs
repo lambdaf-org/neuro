@@ -2,7 +2,7 @@ use super::validate::Validate;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct AssetGroupRes {
     pub id: i32,
     pub label: String,
@@ -11,7 +11,7 @@ pub struct AssetGroupRes {
     pub assets: Vec<GameAssetRes>,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct GameAssetRes {
     pub id: i32,
     pub group_id: i32,
