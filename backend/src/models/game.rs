@@ -1,6 +1,5 @@
 use crate::models::validate::Validate;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -51,27 +50,4 @@ pub struct PlayerStats {
     pub best_score: f64,
     pub avg_score: f64,
     pub session_count: i64,
-}
-
-impl Validate for PlayerStats {
-    fn validate(&self) -> Result<(), Vec<&'static str>> {
-        let mut errors = Vec::new();
-        if self.game_code.trim().is_empty() {
-            errors.push("game_code is required");
-        }
-        if self.best_score < 0.0 {
-            errors.push("best_score must be non-negative");
-        }
-        if self.avg_score < 0.0 {
-            errors.push("avg_score must be non-negative");
-        }
-        if self.session_count < 0 {
-            errors.push("session_count must be non-negative");
-        }
-        if errors.is_empty() {
-            Ok(())
-        } else {
-            Err(errors)
-        }
-    }
 }

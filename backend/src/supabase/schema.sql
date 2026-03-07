@@ -1,4 +1,4 @@
--- Drop in dependency order
+-- Drop tables and views
 DROP TABLE IF EXISTS public.game_assets CASCADE;
 DROP TABLE IF EXISTS public.asset_groups CASCADE;
 DROP TABLE IF EXISTS public.anticheat_log CASCADE;
