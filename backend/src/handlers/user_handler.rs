@@ -22,7 +22,7 @@ use supabase_auth::models::SignUpWithPasswordOptions;
         (status = 500, description = "Registration failed", body = Object),
     ),
     tag = "user",
-    security(("Authorization" = []))
+    security(),
 )]
 pub async fn register(
     body: web::Json<RegisterPayload>,
@@ -84,7 +84,7 @@ pub async fn register(
         (status = 500, description = "Login failed", body = Object),
     ),
     tag = "user",
-    security(("Authorization" = []))
+    security(),
 )]
 pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) -> HttpResponse {
     if let Err(errors) = body.validate() {
