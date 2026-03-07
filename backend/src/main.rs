@@ -37,6 +37,8 @@ use log::info;
 use log::warn;
 use supabase_auth::models::AuthClient;
 use supabase_rs::SupabaseClient;
+use crate::models::assets::GameAssetRes;
+use crate::models::assets::AssetGroupRes;
 
 pub mod config;
 pub mod errors;
@@ -88,6 +90,8 @@ async fn main() -> std::io::Result<()> {
             UpdateAssetGroupReq,
             CreateGameAssetReq, 
             UpdateGameAssetReq,
+            GameAssetRes,
+            AssetGroupRes
         )),
         security(("Authorization" = [])),
         modifiers(&SecuritySchemas),
