@@ -35,10 +35,10 @@ pub struct GameSession {
     pub completed_at: Option<String>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct LeaderboardEntry {
     pub user_id: Uuid,
     pub username: String,
     pub score: f64,
-    pub completed_at: String,
+    pub completed_at: Option<String>,
 }
