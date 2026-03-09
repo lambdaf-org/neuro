@@ -35,9 +35,9 @@ function ratingLabel(ms: number): string {
   return 'Slow'
 }
 
-function ratingColor(ms: number): 'success' | 'primary' | 'warning' | 'error' {
+function ratingColor(ms: number): 'success' | 'secondary' | 'warning' | 'error' {
   if (ms < 250) return 'success'
-  if (ms < 350) return 'primary'
+  if (ms < 350) return 'secondary'
   if (ms < 450) return 'warning'
   return 'error'
 }
@@ -48,7 +48,11 @@ const lastRoundMs = computed(() => {
 })
 
 const isInteractive = computed(
-  () => phase.value === 'waiting' || phase.value === 'signal' || phase.value === 'tooEarly',
+  () =>
+    phase.value === 'waiting' ||
+    phase.value === 'signal' ||
+    phase.value === 'tooEarly' ||
+    phase.value === 'result',
 )
 
 function zoneClass(p: ReactionPhase): string {
@@ -61,7 +65,6 @@ function zoneClass(p: ReactionPhase): string {
 
 <template>
   <div class="rt-root">
-    <!-- Error strip -->
     <UAlert
       v-if="errorMessage"
       color="error"
@@ -71,18 +74,15 @@ function zoneClass(p: ReactionPhase): string {
       class="mb-4"
     />
 
-    <!-- ── Single unified game zone ───────────────────────────── -->
     <div
       class="rt-zone"
       :class="[zoneClass(phase), isInteractive ? 'cursor-pointer select-none' : '']"
       @click="isInteractive ? onAreaClick() : undefined"
     >
-      <!-- Round pill — only during active play -->
       <div v-if="phase !== 'idle' && phase !== 'finished'" class="rt-round-pill">
         {{ currentRound }} / {{ totalRounds }}
       </div>
 
-      <!-- Reset ghost — only during active play -->
       <button
         v-if="phase !== 'idle' && phase !== 'finished'"
         class="rt-reset-btn"
@@ -92,10 +92,9 @@ function zoneClass(p: ReactionPhase): string {
         <UIcon name="i-lucide-x" class="h-4 w-4" />
       </button>
 
-      <!-- ── IDLE ── -->
       <div v-if="phase === 'idle'" class="rt-content">
         <div class="rt-icon-wrap">
-          <UIcon name="i-lucide-mouse-pointer-click" class="h-8 w-8 text-primary" />
+          <UIcon name="i-lucide-mouse-pointer-click" class="h-8 w-8 text-secondary" />
         </div>
         <p class="rt-headline">Reaction Time</p>
         <p class="rt-sub">
@@ -103,7 +102,7 @@ function zoneClass(p: ReactionPhase): string {
           you can. {{ totalRounds }} rounds.
         </p>
         <UButton
-          color="primary"
+          color="secondary"
           size="lg"
           :loading="isBusy"
           :disabled="!canStart"
@@ -114,48 +113,38 @@ function zoneClass(p: ReactionPhase): string {
         </UButton>
       </div>
 
-      <!-- ── COUNTDOWN ── -->
       <div v-else-if="phase === 'countdown'" class="rt-content">
         <p class="rt-label">Get ready</p>
         <p class="rt-huge">{{ countdownRemaining }}</p>
       </div>
 
-      <!-- ── WAITING ── -->
       <div v-else-if="phase === 'waiting'" class="rt-content">
         <UIcon name="i-lucide-hand" class="h-14 w-14 text-white/80" />
-        <p class="rt-huge text-white">Wait…</p>
+        <p class="rt-huge text-white">Wait...</p>
         <p class="rt-sub-light">Don't click yet</p>
       </div>
 
-      <!-- ── SIGNAL ── -->
       <div v-else-if="phase === 'signal'" class="rt-content">
         <UIcon name="i-lucide-zap" class="h-14 w-14 text-white animate-bounce" />
         <p class="rt-huge text-white">Click!</p>
       </div>
 
-      <!-- ── TOO EARLY ── -->
       <div v-else-if="phase === 'tooEarly'" class="rt-content">
         <UIcon name="i-lucide-alert-triangle" class="h-14 w-14 text-white/80" />
         <p class="rt-huge text-white">Too early</p>
         <p class="rt-sub-light">Tap to retry this round</p>
       </div>
 
-      <!-- ── ROUND RESULT ── -->
-      <div
-        v-else-if="phase === 'result'"
-        class="rt-content cursor-pointer"
-        @click.stop="onAreaClick"
-      >
+      <div v-else-if="phase === 'result'" class="rt-content">
         <UBadge :color="ratingColor(lastRoundMs)" variant="soft" size="lg">
           {{ ratingLabel(lastRoundMs) }}
         </UBadge>
         <p class="rt-huge">{{ lastRoundMs }}<span class="text-2xl text-toned"> ms</span></p>
         <p class="rt-label text-dimmed">
-          Round {{ currentRound }} of {{ totalRounds }} · tap to continue
+          Round {{ currentRound }} of {{ totalRounds }} - tap to continue
         </p>
       </div>
 
-      <!-- ── FINISHED ── -->
       <div v-else-if="phase === 'finished'" class="rt-content w-full max-w-sm">
         <UBadge :color="ratingColor(averageMs)" variant="soft" size="lg">
           {{ ratingLabel(averageMs) }}
@@ -165,7 +154,6 @@ function zoneClass(p: ReactionPhase): string {
           <p class="rt-huge">{{ averageMs }}<span class="text-2xl text-toned"> ms</span></p>
         </div>
 
-        <!-- Per-round bars -->
         <div class="w-full space-y-1.5">
           <div v-for="r in roundResults" :key="r.round" class="flex items-center gap-2">
             <span class="w-5 shrink-0 text-xs text-dimmed">{{ r.round }}</span>
@@ -174,7 +162,7 @@ function zoneClass(p: ReactionPhase): string {
                 class="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
                 :class="{
                   'bg-emerald-500': r.reactionMs < 250,
-                  'bg-primary': r.reactionMs >= 250 && r.reactionMs < 350,
+                  'bg-secondary': r.reactionMs >= 250 && r.reactionMs < 350,
                   'bg-amber-500': r.reactionMs >= 350 && r.reactionMs < 450,
                   'bg-red-500': r.reactionMs >= 450,
                 }"
@@ -188,9 +176,9 @@ function zoneClass(p: ReactionPhase): string {
         <div class="flex items-center gap-3">
           <span v-if="isSubmitting" class="flex items-center gap-1.5 text-xs text-dimmed">
             <UIcon name="i-lucide-loader-2" class="h-3.5 w-3.5 animate-spin" />
-            Saving…
+            Saving...
           </span>
-          <UButton color="primary" :disabled="isBusy" :loading="isBusy" @click.stop="startGame">
+          <UButton color="secondary" :disabled="isBusy" :loading="isBusy" @click.stop="startGame">
             Play again
           </UButton>
         </div>
@@ -204,7 +192,6 @@ function zoneClass(p: ReactionPhase): string {
   width: 100%;
 }
 
-/* ── Zone ───────────────────────────────────────────────────────── */
 .rt-zone {
   position: relative;
   display: flex;
@@ -212,29 +199,37 @@ function zoneClass(p: ReactionPhase): string {
   justify-content: center;
   min-height: 22rem;
   border-radius: 1rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--ui-border) 82%, transparent);
+  background: color-mix(in oklab, var(--ui-bg-elevated) 42%, transparent);
+  backdrop-filter: blur(8px);
   transition:
     background-color 120ms ease,
+    border-color 120ms ease,
     box-shadow 120ms ease;
+  box-shadow: 0 8px 16px -8px color-mix(in oklab, var(--ui-secondary) 20%, transparent);
 }
 
 .zone-neutral {
-  border: 1px solid color-mix(in oklab, var(--ui-border) 60%, transparent);
-  background: color-mix(in oklab, var(--ui-bg-elevated) 35%, transparent);
-  backdrop-filter: blur(8px);
+  border-color: color-mix(in oklab, var(--ui-secondary) 24%, var(--ui-border));
+  background: color-mix(in oklab, var(--ui-bg-elevated) 48%, transparent);
 }
 
 .zone-red {
-  background: color-mix(in oklab, #ef4444 88%, black);
+  border-color: color-mix(in oklab, #ef4444 48%, var(--ui-border));
+  background: color-mix(in oklab, #ef4444 82%, var(--ui-bg));
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.12);
 }
 
 .zone-green {
-  background: color-mix(in oklab, #10b981 88%, black);
+  border-color: color-mix(in oklab, #10b981 48%, var(--ui-border));
+  background: color-mix(in oklab, #10b981 82%, var(--ui-bg));
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.1);
 }
 
 .zone-amber {
-  background: color-mix(in oklab, #f59e0b 88%, black);
+  border-color: color-mix(in oklab, #f59e0b 48%, var(--ui-border));
+  background: color-mix(in oklab, #f59e0b 82%, var(--ui-bg));
   box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.12);
 }
 
@@ -242,7 +237,6 @@ function zoneClass(p: ReactionPhase): string {
   transform: scale(0.998);
 }
 
-/* ── Content stack ───────────────────────────────────────────────── */
 .rt-content {
   display: flex;
   flex-direction: column;
@@ -252,7 +246,6 @@ function zoneClass(p: ReactionPhase): string {
   text-align: center;
 }
 
-/* ── Round pill ─────────────────────────────────────────────────── */
 .rt-round-pill {
   position: absolute;
   top: 1rem;
@@ -269,7 +262,6 @@ function zoneClass(p: ReactionPhase): string {
   backdrop-filter: blur(6px);
 }
 
-/* ── Reset button ───────────────────────────────────────────────── */
 .rt-reset-btn {
   position: absolute;
   top: 0.9rem;
@@ -297,7 +289,6 @@ function zoneClass(p: ReactionPhase): string {
   cursor: default;
 }
 
-/* ── Typography ─────────────────────────────────────────────────── */
 .rt-icon-wrap {
   display: inline-flex;
   height: 4rem;
@@ -305,8 +296,8 @@ function zoneClass(p: ReactionPhase): string {
   align-items: center;
   justify-content: center;
   border-radius: 1rem;
-  border: 1px solid color-mix(in oklab, var(--ui-primary) 30%, transparent);
-  background: color-mix(in oklab, var(--ui-primary) 10%, transparent);
+  border: 1px solid color-mix(in oklab, var(--ui-secondary) 32%, transparent);
+  background: color-mix(in oklab, var(--ui-secondary) 12%, transparent);
 }
 
 .rt-headline {
