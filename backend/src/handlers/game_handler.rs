@@ -17,6 +17,7 @@ use crate::repositories::game_repository;
     ),
     responses(
         (status = 201, description = "Session created", body = Object),
+        (status = 409, description = "Constraint violation", body = Object),
         (status = 422, description = "Operation failed", body = Object),
         (status = 500, description = "Internal error", body = Object),
     ),
@@ -48,6 +49,7 @@ pub async fn start_game(
         (status = 400, description = "Validation error", body = Object),
         (status = 403, description = "Session belongs to another user"),
         (status = 404, description = "Session not found", body = Object),
+        (status = 409, description = "Constraint violation", body = Object),
         (status = 422, description = "Operation failed", body = Object),
         (status = 500, description = "Internal error", body = Object),
     ),
@@ -87,11 +89,13 @@ pub async fn finalize_session(
         (status = 200, description = "Session details", body = GameSession),
         (status = 403, description = "Session belongs to another user"),
         (status = 404, description = "Session not found", body = Object),
+        (status = 409, description = "Constraint violation", body = Object),
         (status = 500, description = "Internal error", body = Object),
     ),
     tag = "games",
     security(("Authorization" = []))
 )]
+
 pub async fn get_game_session(
     id: web::Path<Uuid>,
     ext_data: web::ReqData<MiddlewareData>,
@@ -105,6 +109,32 @@ pub async fn get_game_session(
                 HttpResponse::Forbidden().finish()
             }
         }
+        Err(e) => e.to_response(),
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/game/leaderboard/{code}",
+    params(
+        ("code" = String, Path, description = "Game code"),
+    ),
+    responses(
+        (status = 200, description = "Leaderboard entries", body = Vec<LeaderboardEntry>),
+        (status = 409, description = "Constraint violation", body = Object),
+        (status = 422, description = "Operation failed", body = Object),
+        (status = 500, description = "Internal error", body = Object),
+    ),
+    tag = "games",
+)]
+pub async fn get_game_leaderboard(
+    path: web::Path<String>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    let game_code = path.into_inner();
+
+    match game_repository::get_leaderboard(&state.sb_client, &game_code).await {
+        Ok(rows) => HttpResponse::Ok().json(rows),
         Err(e) => e.to_response(),
     }
 }
