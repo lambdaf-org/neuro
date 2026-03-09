@@ -1,8 +1,7 @@
--- Seed: game_metadata, game_task_params, asset_groups, game_assets
+-- Seed: game_metadata, asset_groups, game_assets
 -- Run on a DB where schema.sql has already been applied.
 -- Safe to re-run: clears existing data first.
 
-DELETE FROM public.game_task_params;
 DELETE FROM public.game_metadata;
 
 INSERT INTO public.game_metadata
