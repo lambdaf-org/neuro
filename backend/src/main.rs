@@ -26,6 +26,8 @@ use crate::handlers::asset_handler::__path_get_asset_groups_by_code;
 use crate::handlers::asset_handler::__path_create_asset_group;
 use crate::handlers::asset_handler::__path_update_asset_group;
 use crate::handlers::game_handler::__path_get_game_leaderboard;
+use crate::handlers::game_handler::__path_get_player_stats;
+use crate::handlers::game_handler::__path_get_recent_sessions;
 use self::models::app_state::AppState;
 use self::routes::global_routes;
 use actix_web::App;
@@ -40,6 +42,7 @@ use supabase_auth::models::AuthClient;
 use supabase_rs::SupabaseClient;
 use crate::models::assets::GameAssetRes;
 use crate::models::assets::AssetGroupRes;
+use crate::models::game::PlayerStats;
 
 pub mod config;
 pub mod errors;
@@ -80,6 +83,8 @@ async fn main() -> std::io::Result<()> {
             create_asset_group,
             update_asset_group,
             get_game_leaderboard,
+            get_player_stats,
+            get_recent_sessions,
         ),
         components(schemas(
             RegisterPayload, 
@@ -93,7 +98,8 @@ async fn main() -> std::io::Result<()> {
             CreateGameAssetReq, 
             UpdateGameAssetReq,
             GameAssetRes,
-            AssetGroupRes
+            AssetGroupRes,
+            PlayerStats,
         )),
         security(("Authorization" = [])),
         modifiers(&SecuritySchemas),
