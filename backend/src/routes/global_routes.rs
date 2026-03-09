@@ -54,7 +54,10 @@ pub fn init_api_scope(cfg: &mut web::ServiceConfig) {
                 web::get().to(get_asset_groups_by_code),
             )
             .route("/game/{code}", web::post().to(start_game))
-            .route("/game/{code}", web::get().to(get_game_leaderboard))
+            .route(
+                "/game/leaderboard/{code}",
+                web::get().to(get_game_leaderboard),
+            )
             .route("/game/session/{id}", web::patch().to(finalize_session))
             .route("/game/session/{id}", web::get().to(get_game_session)),
     );
