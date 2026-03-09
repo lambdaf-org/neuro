@@ -4,6 +4,7 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::models::app_state::AppState;
+use crate::models::game::CreateGameEventReq;
 use crate::models::game::FinalizeSessionReq;
 use crate::models::user::MiddlewareData;
 use crate::models::validate::Validate;
@@ -137,7 +138,7 @@ pub async fn get_player_stats(
 
 #[utoipa::path(
     get,
-    path = "/api/game/sessions/{code}/recent",
+    path = "/api/game/session/{code}/recent",
     params(
         ("code" = String, Path, description = "Game code"),
     ),
@@ -186,6 +187,113 @@ pub async fn get_game_leaderboard(
 
     match game_repository::get_leaderboard(&state.sb_client, &game_code).await {
         Ok(rows) => HttpResponse::Ok().json(rows),
+        Err(e) => e.to_response(),
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/games/{code}",
+    params(
+        ("code" = String, Path, description = "Game code"),
+    ),
+    responses(
+        (status = 200, description = "Game metadata", body = GameMetadata),
+        (status = 404, description = "Game not found", body = Object),
+        (status = 500, description = "Internal error", body = Object),
+    ),
+    tag = "games",
+    security(("Authorization" = []))
+)]
+pub async fn get_game_metadata(
+    code: web::Path<String>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    match game_repository::get_metadata_by_code(&state.sb_client, &code.into_inner()).await {
+        Ok(v) => HttpResponse::Ok().json(v),
+        Err(e) => e.to_response(),
+    }
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/game/session/{id}/events",
+    params(
+        ("id" = Uuid, Path, example = "3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+    ),
+    request_body = CreateGameEventReq,
+    responses(
+        (status = 201, description = "Event created", body = Object),
+        (status = 400, description = "Validation error", body = Object),
+        (status = 403, description = "Session belongs to another user"),
+        (status = 404, description = "Session not found", body = Object),
+        (status = 500, description = "Internal error", body = Object),
+    ),
+    tag = "games",
+    security(("Authorization" = []))
+)]
+pub async fn create_game_event(
+    id: web::Path<Uuid>,
+    body: web::Json<CreateGameEventReq>,
+    ext_data: web::ReqData<MiddlewareData>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    if let Err(errors) = body.validate() {
+        return HttpResponse::BadRequest().json(json!({"errors": errors}));
+    }
+    let session_id = id.into_inner();
+    let session = match game_repository::get_session(&state.sb_client, session_id).await {
+        Ok(v) => v,
+        Err(e) => return e.to_response(),
+    };
+    if session.user_id != ext_data.user_id {
+        return HttpResponse::Forbidden().finish();
+    }
+    match game_repository::insert_event(
+        &state.sb_client,
+        session_id,
+        ext_data.user_id,
+        body.round,
+        body.event_value,
+        &body.client_ts,
+    )
+    .await
+    {
+        Ok(event_id) => HttpResponse::Created().json(json!({"id": event_id})),
+        Err(e) => e.to_response(),
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/game/session/{id}/events",
+    params(
+        ("id" = Uuid, Path, example = "3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+    ),
+    responses(
+        (status = 200, description = "Events for session", body = Vec<GameEvent>),
+        (status = 403, description = "Session belongs to another user"),
+        (status = 404, description = "Session not found", body = Object),
+        (status = 500, description = "Internal error", body = Object),
+    ),
+    tag = "games",
+    security(("Authorization" = []))
+)]
+pub async fn get_game_events(
+    id: web::Path<Uuid>,
+    ext_data: web::ReqData<MiddlewareData>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    let session_id = id.into_inner();
+    let session = match game_repository::get_session(&state.sb_client, session_id).await {
+        Ok(v) => v,
+        Err(e) => return e.to_response(),
+    };
+    if session.user_id != ext_data.user_id {
+        return HttpResponse::Forbidden().finish();
+    }
+    match game_repository::get_events_by_session(&state.sb_client, session_id).await {
+        Ok(events) => HttpResponse::Ok().json(events),
         Err(e) => e.to_response(),
     }
 }
