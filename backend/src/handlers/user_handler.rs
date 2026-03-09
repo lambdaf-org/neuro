@@ -10,6 +10,20 @@ use log::error;
 use serde_json::json;
 use supabase_auth::models::SignUpWithPasswordOptions;
 
+#[utoipa::path(
+    post,
+    path = "/register",
+    request_body = RegisterPayload,
+    responses(
+        (status = 200, description = "Registration successful"),
+        (status = 400, description = "Validation error or weak password", body = Object),
+        (status = 409, description = "Email or username already exists", body = Object),
+        (status = 429, description = "Rate limited", body = Object),
+        (status = 500, description = "Registration failed", body = Object),
+    ),
+    tag = "user",
+    security(),
+)]
 pub async fn register(
     body: web::Json<RegisterPayload>,
     state: web::Data<AppState>,
@@ -57,6 +71,21 @@ pub async fn register(
     }
 }
 
+#[utoipa::path(
+    post,
+    path = "/login",
+    request_body = LoginPayload,
+    responses(
+        (status = 200, description = "Login successful", body = LoginRes),
+        (status = 400, description = "Validation error", body = Object),
+        (status = 401, description = "Invalid credentials", body = Object),
+        (status = 403, description = "Email not confirmed", body = Object),
+        (status = 429, description = "Rate limited", body = Object),
+        (status = 500, description = "Login failed", body = Object),
+    ),
+    tag = "user",
+    security(),
+)]
 pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) -> HttpResponse {
     if let Err(errors) = body.validate() {
         return HttpResponse::BadRequest().json(json!({"errors": errors}));
