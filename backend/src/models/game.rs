@@ -21,6 +21,41 @@ impl Validate for FinalizeSessionReq {
     }
 }
 
+#[derive(Deserialize, ToSchema)]
+pub struct CreateGameEventReq {
+    pub round: i32,
+    pub event_value: f64,
+    pub client_ts: String,
+}
+
+impl Validate for CreateGameEventReq {
+    fn validate(&self) -> Result<(), Vec<&'static str>> {
+        let mut errors = Vec::new();
+        if self.round < 1 {
+            errors.push("round must be >= 1");
+        }
+        if self.client_ts.trim().is_empty() {
+            errors.push("client_ts is required");
+        }
+        if errors.is_empty() {
+            Ok(())
+        } else {
+            Err(errors)
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct GameEvent {
+    pub id: Uuid,
+    pub session_id: Uuid,
+    pub user_id: Uuid,
+    pub round: i32,
+    pub event_value: f64,
+    pub client_ts: String,
+    pub created_at: String,
+}
+
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct GameSession {
     pub id: Uuid,
