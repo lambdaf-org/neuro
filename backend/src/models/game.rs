@@ -39,5 +39,16 @@ pub struct LeaderboardEntry {
     pub user_id: Uuid,
     pub username: String,
     pub score: f64,
+    pub completed_at: String,
+}
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct PlayerStats {
+    pub user_id: Uuid,
+    pub username: String,
+    pub game_code: String,
+    pub best_score: f64,
+    pub avg_score: f64,
+    pub session_count: i64,
     pub completed_at: Option<String>,
 }
