@@ -119,6 +119,13 @@ pub async fn get_recent_sessions(
         .map_err(|e| {
             log::error!("Failed fetching recent sessions: {e}");
             RepoError::ExtractionError(String::from("Failed fetching recent sessions"))
+        })?;
+
+    rows.into_iter()
+        .map(|r| serde_json::from_value(r).map_err(|e| RepoError::ExtractionError(e.to_string())))
+        .collect()
+}
+
 pub async fn get_leaderboard(
     db: &SupabaseClient,
     game_code: &str,

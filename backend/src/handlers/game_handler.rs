@@ -113,6 +113,18 @@ pub async fn get_game_session(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/game/stats",
+    responses(
+        (status = 200, description = "Player stats", body = PlayerStats),
+        (status = 409, description = "Constraint violation", body = Object),
+        (status = 422, description = "Operation failed", body = Object),
+        (status = 500, description = "Internal error", body = Object),
+    ),
+    tag = "games",
+    security(("Authorization" = []))
+)]
 pub async fn get_player_stats(
     ext_data: web::ReqData<MiddlewareData>,
     state: web::Data<AppState>,
@@ -123,6 +135,21 @@ pub async fn get_player_stats(
     }
 }
 
+#[utoipa::path(
+    get,
+    path = "/api/game/sessions/{code}/recent",
+    params(
+        ("code" = String, Path, description = "Game code"),
+    ),
+    responses(
+        (status = 200, description = "Recent sessions", body = Vec<GameSession>),
+        (status = 409, description = "Constraint violation", body = Object),
+        (status = 422, description = "Operation failed", body = Object),
+        (status = 500, description = "Internal error", body = Object),
+    ),
+    tag = "games",
+    security(("Authorization" = []))
+)]
 pub async fn get_recent_sessions(
     path: web::Path<String>,
     ext_data: web::ReqData<MiddlewareData>,
@@ -132,6 +159,11 @@ pub async fn get_recent_sessions(
     match game_repository::get_recent_sessions(&state.sb_client, ext_data.user_id, &game_code, 10)
         .await
     {
+        Ok(rows) => HttpResponse::Ok().json(rows),
+        Err(e) => e.to_response(),
+    }
+}
+
 #[utoipa::path(
     get,
     path = "/api/game/leaderboard/{code}",
