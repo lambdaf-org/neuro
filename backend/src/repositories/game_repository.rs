@@ -6,6 +6,7 @@ use crate::errors::custom_errors::RepoError;
 use crate::models::game::GameSession;
 use crate::models::game::LeaderboardEntry;
 use crate::models::game::PlayerStats;
+
 // TODO: Create enum for game codes
 pub async fn create_session(
     db: &SupabaseClient,
@@ -118,6 +119,19 @@ pub async fn get_recent_sessions(
         .map_err(|e| {
             log::error!("Failed fetching recent sessions: {e}");
             RepoError::ExtractionError(String::from("Failed fetching recent sessions"))
+pub async fn get_leaderboard(
+    db: &SupabaseClient,
+    game_code: &str,
+) -> Result<Vec<LeaderboardEntry>, RepoError> {
+    let rows = db
+        .select("leaderboard_view")
+        .eq("game_code", game_code)
+        .order("score", false)
+        .execute()
+        .await
+        .map_err(|e| {
+            log::error!("Failed fetching leaderboard: {e}");
+            RepoError::ExtractionError(String::from("Failed fetching leaderboard"))
         })?;
 
     rows.into_iter()
