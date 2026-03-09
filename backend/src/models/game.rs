@@ -42,7 +42,7 @@ pub struct LeaderboardEntry {
     pub completed_at: String,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct PlayerStats {
     pub user_id: Uuid,
     pub username: String,
