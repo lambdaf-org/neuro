@@ -4,6 +4,8 @@ use uuid::Uuid;
 
 use crate::errors::custom_errors::RepoError;
 use crate::models::game::GameSession;
+use crate::models::game::LeaderboardEntry;
+
 // TODO: Create enum for game codes
 pub async fn create_session(
     db: &SupabaseClient,
@@ -77,4 +79,24 @@ pub async fn get_session(db: &SupabaseClient, session_id: Uuid) -> Result<GameSe
         .ok_or(RepoError::NotFound(String::from("Session not found")))?;
 
     serde_json::from_value(row).map_err(|e| RepoError::ExtractionError(e.to_string()))
+}
+
+pub async fn get_leaderboard(
+    db: &SupabaseClient,
+    game_code: &str,
+) -> Result<Vec<LeaderboardEntry>, RepoError> {
+    let rows = db
+        .select("leaderboard_view")
+        .eq("game_code", game_code)
+        .order("score", false)
+        .execute()
+        .await
+        .map_err(|e| {
+            log::error!("Failed fetching leaderboard: {e}");
+            RepoError::ExtractionError(String::from("Failed fetching leaderboard"))
+        })?;
+
+    rows.into_iter()
+        .map(|r| serde_json::from_value(r).map_err(|e| RepoError::ExtractionError(e.to_string())))
+        .collect()
 }
