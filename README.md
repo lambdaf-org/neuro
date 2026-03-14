@@ -96,8 +96,8 @@ cargo run
 To reset all tables, run the contents of `backend/src/supabase/schema.sql` in your Supabase dashboard under **SQL Editor > New Query**.
 
 ### Seed Data
-1. Run `backend/src/supabase/schema.sql` in the Supabase SQL Editor to create the required database schema (including `game_metadata` and `game_task_params`).
-2. Run `backend/src/supabase/seed_game_assets.sql` in the Supabase SQL Editor. Replace `<project>` in the seed script with your Supabase project ID before running. This populates `game_metadata`, `game_task_params`, `asset_groups`, and `game_assets`. Safe to re-run as it clears existing data first.
+1. Run `backend/src/supabase/schema.sql` in the Supabase SQL Editor to create the required database schema (including `game_metadata`).
+2. Run `backend/src/supabase/seed_game_assets.sql` in the Supabase SQL Editor. Replace `<project>` in the seed script with your Supabase project ID before running. This populates `game_metadata`, `asset_groups`, and `game_assets`. Safe to re-run as it clears existing data first.
 
 ### Game Assets
 Assets are stored in a public Supabase Storage bucket called `game-assets`.
