@@ -138,7 +138,7 @@ pub async fn get_player_stats(
 
 #[utoipa::path(
     get,
-    path = "/api/game/session/{code}/recent",
+    path = "/api/game/{code}/recent",
     params(
         ("code" = String, Path, description = "Game code"),
     ),
