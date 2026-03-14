@@ -192,7 +192,7 @@ pub async fn get_game_leaderboard(
 
 #[utoipa::path(
     get,
-    path = "/api/games/{code}",
+    path = "/api/game/metadata/{code}",
     params(
         ("code" = String, Path, description = "Game code"),
     ),
