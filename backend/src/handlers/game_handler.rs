@@ -203,6 +203,7 @@ pub async fn get_game_leaderboard(
         (status = 400, description = "Validation error", body = Object),
         (status = 403, description = "Session belongs to another user"),
         (status = 404, description = "Session not found", body = Object),
+        (status = 422, description = "Operation failed", body = Object),
         (status = 500, description = "Internal error", body = Object),
     ),
     tag = "games",
