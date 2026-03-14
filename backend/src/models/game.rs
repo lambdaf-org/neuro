@@ -34,8 +34,11 @@ impl Validate for CreateGameEventReq {
         if self.round < 1 {
             errors.push("round must be >= 1");
         }
-        if self.client_ts.trim().is_empty() {
+        let ts = self.client_ts.trim();
+        if ts.is_empty() {
             errors.push("client_ts is required");
+        } else if chrono::DateTime::parse_from_rfc3339(ts).is_err() {
+            errors.push("client_ts must be a valid RFC3339 timestamp");
         }
         if errors.is_empty() {
             Ok(())
