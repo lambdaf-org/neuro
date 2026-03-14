@@ -1,5 +1,4 @@
 -- Drop tables and views in dependency order
-DROP TABLE IF EXISTS public.game_task_params CASCADE;
 DROP TABLE IF EXISTS public.game_metadata CASCADE;
 DROP TABLE IF EXISTS public.game_assets CASCADE;
 DROP TABLE IF EXISTS public.asset_groups CASCADE;
