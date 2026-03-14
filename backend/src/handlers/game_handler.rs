@@ -142,7 +142,7 @@ pub async fn get_player_stats(
         ("code" = String, Path, description = "Game code"),
     ),
     responses(
-        (status = 200, description = "Recent sessions", body = Vec<GameSession>),
+        (status = 200, description = "Recent sessions", body = Vec<LeaderboardEntry>),
         (status = 409, description = "Constraint violation", body = Object),
         (status = 422, description = "Operation failed", body = Object),
         (status = 500, description = "Internal error", body = Object),
