@@ -188,6 +188,7 @@ pub async fn get_events_by_session(
         .select("game_events")
         .eq("session_id", &session_id.to_string())
         .order("round", true)
+        .limit(1000)
         .execute()
         .await
         .map_err(|e| {
