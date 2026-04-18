@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 
 import ProtectedNav from '@/components/ProtectedNav.vue'
+import { useGameMetadata } from '@/composables/useGameMetadata'
 import type { GameId } from '@/lib/play/modules'
 import { findPlayModuleById } from '@/lib/play/modules'
 
@@ -25,6 +26,15 @@ const gameId = computed(() => {
 
 const selectedModule = computed(() => findPlayModuleById(gameId.value))
 const gameComponent = computed(() => GAME_REGISTRY[gameId.value as GameId] ?? null)
+const comingSoonModule = computed(
+  () => (selectedModule.value && !gameComponent.value ? selectedModule.value : null),
+)
+const backendGameCode = computed(() => selectedModule.value?.chcCode.toLowerCase() ?? '')
+const { metadata, isLoading: isMetadataLoading, errorMessage: metadataError } = useGameMetadata({
+  gameCode: backendGameCode,
+})
+const pageChcCode = computed(() => metadata.value?.chc_factor || selectedModule.value?.chcCode || '')
+const pageTitle = computed(() => metadata.value?.display_name || selectedModule.value?.name || '')
 </script>
 
 <template>
@@ -40,9 +50,9 @@ const gameComponent = computed(() => GAME_REGISTRY[gameId.value as GameId] ?? nu
           </UButton>
           <template v-if="selectedModule">
             <span class="text-default/30">/</span>
-            <UBadge color="primary" variant="soft" size="sm">{{ selectedModule.chcCode }}</UBadge>
+            <UBadge color="primary" variant="soft" size="sm">{{ pageChcCode }}</UBadge>
             <h1 class="text-lg font-semibold text-highlighted">
-              {{ selectedModule.name }}
+              {{ pageTitle }}
             </h1>
           </template>
         </div>
@@ -56,24 +66,35 @@ const gameComponent = computed(() => GAME_REGISTRY[gameId.value as GameId] ?? nu
           :description="`No module registered for '${gameId}'.`"
         />
 
+        <UAlert
+          v-if="selectedModule && metadataError"
+          color="warning"
+          variant="soft"
+          title="Game details unavailable"
+          :description="metadataError"
+        />
+
+        <USkeleton v-if="selectedModule && isMetadataLoading" class="h-96 w-full rounded-xl" />
+
         <!-- Registered game component -->
         <component
           v-else-if="gameComponent"
           :is="gameComponent"
-          :game-code="selectedModule.chcCode.toLowerCase()"
+          :game-code="backendGameCode"
+          :metadata="metadata"
         />
 
         <!-- Module exists but no component registered yet -->
         <div
-          v-else
+          v-else-if="comingSoonModule"
           class="flex min-h-72 flex-col items-center justify-center gap-3 rounded-xl border border-default/50 bg-elevated/30 p-10 text-center backdrop-blur-sm"
         >
           <div
             class="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-secondary/30 bg-secondary/10"
           >
-            <UIcon :name="selectedModule.icon" class="h-6 w-6 text-secondary" />
+            <UIcon :name="comingSoonModule.icon" class="h-6 w-6 text-secondary" />
           </div>
-          <p class="font-semibold text-highlighted">{{ selectedModule.name }}</p>
+          <p class="font-semibold text-highlighted">{{ comingSoonModule.name }}</p>
           <p class="text-sm text-toned">This module is coming soon.</p>
         </div>
       </div>
