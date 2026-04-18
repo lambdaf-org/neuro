@@ -102,6 +102,24 @@ CREATE TABLE public.game_assets (
     is_correct BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+-- GAME EVENTS
+-- Per-trial log for every game session. Each row is one atomic user action
+-- (one reaction, one sequence attempt, one symbol match, one pattern answer, etc).
+-- event_value is polymorphic: could be ms, sequence length, boolean as 0/1, etc.
+-- The client_ts lets anti-cheat compare server receipt time vs claimed client time.
+CREATE TABLE public.game_events (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID NOT NULL REFERENCES public.game_sessions(id) ON DELETE CASCADE,
+    user_id    UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    round      INT  NOT NULL,
+    event_value DOUBLE PRECISION NOT NULL,
+    client_ts  TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_events_session ON public.game_events(session_id, round);
+CREATE INDEX idx_events_user    ON public.game_events(user_id);
+
 -- INDEXES
 CREATE INDEX idx_sessions_user  ON public.game_sessions(user_id);
 CREATE INDEX idx_anticheat_user ON public.anticheat_log(user_id);
