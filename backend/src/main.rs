@@ -28,6 +28,8 @@ use crate::handlers::asset_handler::__path_update_asset_group;
 use crate::handlers::game_handler::__path_get_game_leaderboard;
 use crate::handlers::game_handler::__path_get_player_stats;
 use crate::handlers::game_handler::__path_get_recent_sessions;
+use crate::models::game::GameMetadata;
+use crate::handlers::game_handler::__path_get_game_metadata;
 use self::models::app_state::AppState;
 use self::routes::global_routes;
 use actix_web::App;
@@ -85,6 +87,7 @@ async fn main() -> std::io::Result<()> {
             get_game_leaderboard,
             get_player_stats,
             get_recent_sessions,
+            get_game_metadata,
         ),
         components(schemas(
             RegisterPayload, 
@@ -100,6 +103,7 @@ async fn main() -> std::io::Result<()> {
             GameAssetRes,
             AssetGroupRes,
             PlayerStats,
+            GameMetadata,
         )),
         security(("Authorization" = [])),
         modifiers(&SecuritySchemas),
