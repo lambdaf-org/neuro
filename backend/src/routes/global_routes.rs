@@ -9,7 +9,12 @@ use crate::handlers::asset_handler::list_game_assets;
 use crate::handlers::asset_handler::update_asset_group;
 use crate::handlers::asset_handler::update_game_asset;
 use crate::handlers::game_handler;
+use crate::handlers::game_handler::get_game_metadata;
+use crate::handlers::game_handler::create_game_event;
+use crate::handlers::game_handler::get_game_events;
 use crate::handlers::game_handler::get_game_session;
+use crate::handlers::game_handler::get_player_stats;
+use crate::handlers::game_handler::get_recent_sessions;
 use crate::handlers::user_handler::login;
 use crate::handlers::user_handler::register;
 use crate::models::user::MiddlewareData;
@@ -22,8 +27,8 @@ use actix_web::middleware::Next;
 use actix_web::middleware::from_fn;
 use actix_web::web;
 use game_handler::finalize_session;
+use game_handler::get_game_leaderboard;
 use game_handler::start_game;
-
 use log::error;
 
 pub fn init_admin_scope(cfg: &mut web::ServiceConfig) {
@@ -49,13 +54,25 @@ pub fn init_api_scope(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/api")
             .wrap(from_fn(auth_filter))
-            .route("/game/{code}", web::post().to(start_game))
             .route(
                 "/asset-groups/{code}",
                 web::get().to(get_asset_groups_by_code),
             )
+            .route("/game/{code}", web::post().to(start_game))
+            .route(
+                "/game/leaderboard/{code}",
+                web::get().to(get_game_leaderboard),
+            )
             .route("/game/session/{id}", web::patch().to(finalize_session))
-            .route("/game/session/{id}", web::get().to(get_game_session)),
+            .route(
+                "/game/session/{id}/events",
+                web::post().to(create_game_event),
+            )
+            .route("/game/session/{id}/events", web::get().to(get_game_events))
+            .route("/game/session/{id}", web::get().to(get_game_session))
+            .route("/game/metadata/{code}", web::get().to(get_game_metadata))
+            .route("/game/stats", web::get().to(get_player_stats))
+            .route("/game/{code}/recent", web::get().to(get_recent_sessions)),
     );
 }
 

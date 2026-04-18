@@ -1,15 +1,13 @@
+use crate::models::validate::Validate;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
-
-use crate::models::validate::Validate;
 
 #[derive(Deserialize, ToSchema)]
 pub struct LoginPayload {
     pub email: String,
     pub password: String,
 }
-
 impl Validate for LoginPayload {
     fn validate(&self) -> Result<(), Vec<&'static str>> {
         let mut errors = Vec::new();
@@ -33,7 +31,6 @@ pub struct RegisterPayload {
     pub username: String,
     pub password: String,
 }
-
 impl Validate for RegisterPayload {
     fn validate(&self) -> Result<(), Vec<&'static str>> {
         let mut errors = Vec::new();
@@ -59,7 +56,7 @@ pub struct MiddlewareData {
     pub user_id: Uuid,
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, ToSchema)]
 pub struct LoginRes {
     pub user_id: Uuid,
     pub email: String,

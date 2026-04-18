@@ -1,4 +1,5 @@
--- Drop in dependency order
+-- Drop tables and views in dependency order
+DROP TABLE IF EXISTS public.game_metadata CASCADE;
 DROP TABLE IF EXISTS public.game_assets CASCADE;
 DROP TABLE IF EXISTS public.asset_groups CASCADE;
 DROP TABLE IF EXISTS public.anticheat_log CASCADE;
@@ -6,6 +7,8 @@ DROP TABLE IF EXISTS public.game_sessions CASCADE;
 DROP TABLE IF EXISTS public.game_events CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
+DROP VIEW IF EXISTS public.player_stats_view;
+DROP VIEW IF EXISTS public.leaderboard_view;
 
 -- PROFILES
 CREATE TABLE public.profiles (
@@ -39,6 +42,28 @@ WHERE p.id IS NULL;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- GAME METADATA
+-- Central registry of every cognitive game: display info, scientific context,
+-- and scoring semantics. game_code is the natural key used across all tables.
+CREATE TABLE public.game_metadata (
+    game_code        TEXT PRIMARY KEY,
+    display_name     TEXT        NOT NULL,
+    chc_factor       TEXT        NOT NULL,
+    cognitive_domain TEXT        NOT NULL,
+    description      TEXT        NOT NULL,
+    scientific_basis TEXT        NOT NULL,
+    task_summary     TEXT        NOT NULL,
+    metric_name      TEXT        NOT NULL,
+    metric_direction TEXT        NOT NULL
+        CHECK (metric_direction IN ('lower_is_better', 'higher_is_better')),
+    icon_url         TEXT,
+    sort_order       INT         NOT NULL DEFAULT 0,
+    is_active        BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 
 -- GAME SESSIONS
 CREATE TABLE public.game_sessions (
@@ -77,12 +102,59 @@ CREATE TABLE public.game_assets (
     is_correct BOOLEAN NOT NULL DEFAULT FALSE
 );
 
+-- GAME EVENTS
+-- Per-trial log for every game session. Each row is one atomic user action
+-- (one reaction, one sequence attempt, one symbol match, one pattern answer, etc).
+-- event_value is polymorphic: could be ms, sequence length, boolean as 0/1, etc.
+-- The client_ts lets anti-cheat compare server receipt time vs claimed client time.
+CREATE TABLE public.game_events (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id UUID NOT NULL REFERENCES public.game_sessions(id) ON DELETE CASCADE,
+    user_id    UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    round      INT  NOT NULL,
+    event_value DOUBLE PRECISION NOT NULL,
+    client_ts  TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_events_session ON public.game_events(session_id, round);
+CREATE INDEX idx_events_user    ON public.game_events(user_id);
+
 -- INDEXES
 CREATE INDEX idx_sessions_user  ON public.game_sessions(user_id);
 CREATE INDEX idx_anticheat_user ON public.anticheat_log(user_id);
 CREATE INDEX idx_groups_game    ON public.asset_groups(game_code);
 CREATE INDEX idx_assets_group   ON public.game_assets(group_id);
+CREATE INDEX idx_metadata_active ON public.game_metadata(is_active, sort_order);
+
+CREATE VIEW public.player_stats_view AS
+SELECT
+    gs.user_id,
+    gs.game_code,
+    p.username,
+    MAX(gs.score) AS best_score,
+    AVG(gs.score) AS avg_score,
+    COUNT(*) AS session_count
+FROM public.game_sessions gs
+JOIN public.profiles p ON p.id = gs.user_id
+WHERE gs.status = 'completed' AND gs.score IS NOT NULL
+GROUP BY gs.user_id, gs.game_code, p.username;
 
 -- CONSTRAINTS
 -- Ensure at most one correct asset per group
 CREATE UNIQUE INDEX idx_one_correct_per_group ON public.game_assets(group_id) WHERE is_correct = true;
+
+CREATE VIEW public.leaderboard_view AS
+SELECT
+    gs.game_code,
+    gs.score,
+    gs.completed_at,
+    p.id AS user_id,
+    p.username
+FROM public.game_sessions gs
+JOIN public.profiles p ON p.id = gs.user_id
+WHERE gs.status = 'completed' AND gs.score IS NOT NULL AND completed_at IS NOT NULL;
+
+CREATE INDEX idx_sessions_leaderboard
+    ON public.game_sessions(game_code, score DESC)
+    WHERE status = 'completed' AND score IS NOT NULL;
