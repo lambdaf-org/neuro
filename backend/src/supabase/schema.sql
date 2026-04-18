@@ -1,4 +1,5 @@
--- Drop tables and views
+-- Drop tables and views in dependency order
+DROP TABLE IF EXISTS public.game_metadata CASCADE;
 DROP TABLE IF EXISTS public.game_assets CASCADE;
 DROP TABLE IF EXISTS public.asset_groups CASCADE;
 DROP TABLE IF EXISTS public.anticheat_log CASCADE;
@@ -42,6 +43,28 @@ CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
+-- GAME METADATA
+-- Central registry of every cognitive game: display info, scientific context,
+-- and scoring semantics. game_code is the natural key used across all tables.
+CREATE TABLE public.game_metadata (
+    game_code        TEXT PRIMARY KEY,
+    display_name     TEXT        NOT NULL,
+    chc_factor       TEXT        NOT NULL,
+    cognitive_domain TEXT        NOT NULL,
+    description      TEXT        NOT NULL,
+    scientific_basis TEXT        NOT NULL,
+    task_summary     TEXT        NOT NULL,
+    metric_name      TEXT        NOT NULL,
+    metric_direction TEXT        NOT NULL
+        CHECK (metric_direction IN ('lower_is_better', 'higher_is_better')),
+    icon_url         TEXT,
+    sort_order       INT         NOT NULL DEFAULT 0,
+    is_active        BOOLEAN     NOT NULL DEFAULT TRUE,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+
 -- GAME SESSIONS
 CREATE TABLE public.game_sessions (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -84,6 +107,7 @@ CREATE INDEX idx_sessions_user  ON public.game_sessions(user_id);
 CREATE INDEX idx_anticheat_user ON public.anticheat_log(user_id);
 CREATE INDEX idx_groups_game    ON public.asset_groups(game_code);
 CREATE INDEX idx_assets_group   ON public.game_assets(group_id);
+CREATE INDEX idx_metadata_active ON public.game_metadata(is_active, sort_order);
 
 CREATE VIEW public.player_stats_view AS
 SELECT

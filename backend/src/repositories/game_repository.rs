@@ -3,6 +3,7 @@ use supabase_rs::SupabaseClient;
 use uuid::Uuid;
 
 use crate::errors::custom_errors::RepoError;
+use crate::models::game::GameMetadata;
 use crate::models::game::GameSession;
 use crate::models::game::LeaderboardEntry;
 use crate::models::game::PlayerStats;
@@ -144,4 +145,26 @@ pub async fn get_leaderboard(
     rows.into_iter()
         .map(|r| serde_json::from_value(r).map_err(|e| RepoError::ExtractionError(e.to_string())))
         .collect()
+}
+
+pub async fn get_metadata_by_code(
+    db: &SupabaseClient,
+    game_code: &str,
+) -> Result<GameMetadata, RepoError> {
+    let rows = db
+        .select("game_metadata")
+        .eq("game_code", game_code)
+        .execute()
+        .await
+        .map_err(|e| {
+            log::error!("Failed fetching game metadata: {e}");
+            RepoError::ExtractionError(String::from("Failed fetching game metadata"))
+        })?;
+
+    let row = rows
+        .into_iter()
+        .next()
+        .ok_or(RepoError::NotFound(String::from("Game not found")))?;
+
+    serde_json::from_value(row).map_err(|e| RepoError::ExtractionError(e.to_string()))
 }
