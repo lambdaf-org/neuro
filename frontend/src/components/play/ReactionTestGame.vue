@@ -2,9 +2,11 @@
 import { computed } from 'vue'
 
 import { useReactionGame, type ReactionPhase } from '@/composables/useReactionGame'
+import type { GameMetadata } from '@/lib/play/metadata'
 
 const props = defineProps<{
   gameCode: string
+  metadata: GameMetadata | null
 }>()
 
 const {
@@ -46,6 +48,14 @@ const lastRoundMs = computed(() => {
   const results = roundResults.value
   return results.length > 0 ? results[results.length - 1]!.reactionMs : 0
 })
+
+const displayName = computed(() => props.metadata?.display_name || 'Reaction Time')
+const taskSummary = computed(
+  () =>
+    props.metadata?.task_summary ||
+    'Wait for green, then click as fast as you can. Multiple rounds are averaged.',
+)
+const benchmarkLabel = computed(() => props.metadata?.metric_name || '')
 
 const isInteractive = computed(
   () =>
@@ -96,10 +106,12 @@ function zoneClass(p: ReactionPhase): string {
         <div class="rt-icon-wrap">
           <UIcon name="i-lucide-mouse-pointer-click" class="h-8 w-8 text-secondary" />
         </div>
-        <p class="rt-headline">Reaction Time</p>
+        <p class="rt-headline">{{ displayName }}</p>
         <p class="rt-sub">
-          Wait for <span class="text-emerald-500 font-semibold">green</span>, then click as fast as
-          you can. {{ totalRounds }} rounds.
+          {{ taskSummary }} {{ totalRounds }} rounds.
+        </p>
+        <p v-if="benchmarkLabel" class="rt-benchmark">
+          Benchmark: {{ benchmarkLabel }}
         </p>
         <UButton
           color="secondary"
@@ -331,5 +343,12 @@ function zoneClass(p: ReactionPhase): string {
 .rt-sub-light {
   font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.65);
+}
+
+.rt-benchmark {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--ui-text-toned) 88%, transparent);
 }
 </style>
