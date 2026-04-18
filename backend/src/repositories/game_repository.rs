@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::errors::custom_errors::RepoError;
 use crate::models::game::GameMetadata;
+use crate::models::game::GameEvent;
 use crate::models::game::GameSession;
 use crate::models::game::LeaderboardEntry;
 use crate::models::game::PlayerStats;
@@ -167,4 +168,58 @@ pub async fn get_metadata_by_code(
         .ok_or(RepoError::NotFound(String::from("Game not found")))?;
 
     serde_json::from_value(row).map_err(|e| RepoError::ExtractionError(e.to_string()))
+}
+
+pub async fn insert_event(
+    db: &SupabaseClient,
+    session_id: Uuid,
+    user_id: Uuid,
+    round: i32,
+    event_value: f64,
+    client_ts: &str,
+) -> Result<Uuid, RepoError> {
+    let result = db
+        .insert(
+            "game_events",
+            json!({
+                "session_id": session_id,
+                "user_id": user_id,
+                "round": round,
+                "event_value": event_value,
+                "client_ts": client_ts,
+            }),
+        )
+        .await
+        .map_err(|e| {
+            log::error!("Failed inserting game event: {e}");
+            RepoError::InsertionError(String::from("Failed inserting game event"))
+        })?;
+
+    let id: Uuid = serde_json::from_str(&result).map_err(|e| {
+        log::error!("Invalid UUID returned from DB: {e}");
+        RepoError::InsertionError(String::from("Invalid event id"))
+    })?;
+
+    Ok(id)
+}
+
+pub async fn get_events_by_session(
+    db: &SupabaseClient,
+    session_id: Uuid,
+) -> Result<Vec<GameEvent>, RepoError> {
+    let rows = db
+        .select("game_events")
+        .eq("session_id", &session_id.to_string())
+        .order("round", true)
+        .limit(1000)
+        .execute()
+        .await
+        .map_err(|e| {
+            log::error!("Failed fetching game events: {e}");
+            RepoError::ExtractionError(String::from("Failed fetching game events"))
+        })?;
+
+    rows.into_iter()
+        .map(|r| serde_json::from_value(r).map_err(|e| RepoError::ExtractionError(e.to_string())))
+        .collect()
 }

@@ -10,6 +10,8 @@ use crate::handlers::asset_handler::update_asset_group;
 use crate::handlers::asset_handler::update_game_asset;
 use crate::handlers::game_handler;
 use crate::handlers::game_handler::get_game_metadata;
+use crate::handlers::game_handler::create_game_event;
+use crate::handlers::game_handler::get_game_events;
 use crate::handlers::game_handler::get_game_session;
 use crate::handlers::game_handler::get_player_stats;
 use crate::handlers::game_handler::get_recent_sessions;
@@ -62,6 +64,11 @@ pub fn init_api_scope(cfg: &mut web::ServiceConfig) {
                 web::get().to(get_game_leaderboard),
             )
             .route("/game/session/{id}", web::patch().to(finalize_session))
+            .route(
+                "/game/session/{id}/events",
+                web::post().to(create_game_event),
+            )
+            .route("/game/session/{id}/events", web::get().to(get_game_events))
             .route("/game/session/{id}", web::get().to(get_game_session))
             .route("/game/metadata/{code}", web::get().to(get_game_metadata))
             .route("/game/stats", web::get().to(get_player_stats))
