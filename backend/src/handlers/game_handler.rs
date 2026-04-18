@@ -143,7 +143,7 @@ pub async fn get_player_stats(
         ("code" = String, Path, description = "Game code"),
     ),
     responses(
-        (status = 200, description = "Recent sessions", body = Vec<GameSession>),
+        (status = 200, description = "Recent sessions", body = Vec<LeaderboardEntry>),
         (status = 409, description = "Constraint violation", body = Object),
         (status = 422, description = "Operation failed", body = Object),
         (status = 500, description = "Internal error", body = Object),
@@ -187,6 +187,30 @@ pub async fn get_game_leaderboard(
 
     match game_repository::get_leaderboard(&state.sb_client, &game_code).await {
         Ok(rows) => HttpResponse::Ok().json(rows),
+        Err(e) => e.to_response(),
+    }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/game/metadata/{code}",
+    params(
+        ("code" = String, Path, description = "Game code"),
+    ),
+    responses(
+        (status = 200, description = "Game metadata", body = GameMetadata),
+        (status = 404, description = "Game not found", body = Object),
+        (status = 500, description = "Internal error", body = Object),
+    ),
+    tag = "games",
+    security(("Authorization" = []))
+)]
+pub async fn get_game_metadata(
+    code: web::Path<String>,
+    state: web::Data<AppState>,
+) -> HttpResponse {
+    match game_repository::get_metadata_by_code(&state.sb_client, &code.into_inner()).await {
+        Ok(v) => HttpResponse::Ok().json(v),
         Err(e) => e.to_response(),
     }
 }

@@ -90,3 +90,19 @@ pub struct PlayerStats {
     pub session_count: i64,
     pub completed_at: Option<String>,
 }
+
+#[derive(Deserialize, Serialize, ToSchema)]
+pub struct GameMetadata {
+    pub game_code: String,
+    pub display_name: String,
+    pub chc_factor: String,
+    pub cognitive_domain: String,
+    pub description: String,
+    pub scientific_basis: String,
+    pub task_summary: String,
+    pub metric_name: String,
+    pub metric_direction: String,
+    pub icon_url: Option<String>,
+    pub sort_order: i32,
+    pub is_active: bool,
+}
