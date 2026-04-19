@@ -19,7 +19,7 @@ const {
   canStart,
   isSubmitting,
   errorMessage,
-  averageMs,
+  medianMs,
   startGame,
   resetGame,
   onAreaClick,
@@ -28,6 +28,7 @@ const {
 })
 
 function ratingLabel(ms: number): string {
+  if (ms <= 0) return 'No score'
   if (ms < 200) return 'Incredible'
   if (ms < 250) return 'Excellent'
   if (ms < 300) return 'Great'
@@ -37,7 +38,8 @@ function ratingLabel(ms: number): string {
   return 'Slow'
 }
 
-function ratingColor(ms: number): 'success' | 'secondary' | 'warning' | 'error' {
+function ratingColor(ms: number): 'neutral' | 'success' | 'secondary' | 'warning' | 'error' {
+  if (ms <= 0) return 'neutral'
   if (ms < 250) return 'success'
   if (ms < 350) return 'secondary'
   if (ms < 450) return 'warning'
@@ -53,7 +55,7 @@ const displayName = computed(() => props.metadata?.display_name || 'Reaction Tim
 const taskSummary = computed(
   () =>
     props.metadata?.task_summary ||
-    'Wait for green, then click as fast as you can. Multiple rounds are averaged.',
+    'Wait for green, then click as fast as you can. Your score uses the median valid reaction time.',
 )
 const benchmarkLabel = computed(() => props.metadata?.metric_name || '')
 
@@ -158,12 +160,12 @@ function zoneClass(p: ReactionPhase): string {
       </div>
 
       <div v-else-if="phase === 'finished'" class="rt-content w-full max-w-sm">
-        <UBadge :color="ratingColor(averageMs)" variant="soft" size="lg">
-          {{ ratingLabel(averageMs) }}
+        <UBadge :color="ratingColor(medianMs)" variant="soft" size="lg">
+          {{ ratingLabel(medianMs) }}
         </UBadge>
         <div>
-          <p class="rt-label text-toned">Average reaction time</p>
-          <p class="rt-huge">{{ averageMs }}<span class="text-2xl text-toned"> ms</span></p>
+          <p class="rt-label text-toned">Median reaction time</p>
+          <p class="rt-huge">{{ medianMs }}<span class="text-2xl text-toned"> ms</span></p>
         </div>
 
         <div class="w-full space-y-1.5">

@@ -26,6 +26,8 @@ const TOTAL_ROUNDS = 5
 const MIN_WAIT_MS = 1500
 const MAX_WAIT_MS = 4500
 const COUNTDOWN_SECONDS = 3
+const MIN_VALID_REACTION_MS = 150
+const MAX_VALID_REACTION_MS = 1500
 
 function randomWaitMs(): number {
   return Math.round(MIN_WAIT_MS + Math.random() * (MAX_WAIT_MS - MIN_WAIT_MS))
@@ -36,6 +38,34 @@ function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b)
   const mid = Math.floor(sorted.length / 2)
   return sorted.length % 2 === 0 ? Math.round((sorted[mid - 1]! + sorted[mid]!) / 2) : sorted[mid]!
+}
+
+interface ReactionTimeSummary {
+  scoredTimes: number[]
+  averageMs: number
+  medianMs: number
+  bestMs: number
+  worstMs: number
+  totalMs: number
+  excludedCount: number
+}
+
+function summarizeReactionTimes(times: number[]): ReactionTimeSummary {
+  const scoredTimes = times.filter((ms) => ms >= MIN_VALID_REACTION_MS && ms <= MAX_VALID_REACTION_MS)
+  const averageMs =
+    scoredTimes.length > 0
+      ? Math.round(scoredTimes.reduce((a, b) => a + b, 0) / scoredTimes.length)
+      : 0
+
+  return {
+    scoredTimes,
+    averageMs,
+    medianMs: median(scoredTimes),
+    bestMs: scoredTimes.length > 0 ? Math.min(...scoredTimes) : 0,
+    worstMs: scoredTimes.length > 0 ? Math.max(...scoredTimes) : 0,
+    totalMs: times.reduce((a, b) => a + b, 0),
+    excludedCount: times.length - scoredTimes.length,
+  }
 }
 
 export interface RoundResult {
@@ -155,24 +185,21 @@ export function useReactionGame(options: UseReactionGameOptions) {
     phase.value = 'finished'
 
     const times = roundResults.value.map((r) => r.reactionMs)
-    const avg = times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0
-    const best = times.length > 0 ? Math.min(...times) : 0
-    const worst = times.length > 0 ? Math.max(...times) : 0
-    const med = median(times)
-    const totalMs = times.reduce((a, b) => a + b, 0)
+    const summary = summarizeReactionTimes(times)
 
-    const score = avg > 0 ? Number((100000 / avg).toFixed(2)) : 0
+    const score = summary.medianMs > 0 ? Number((100000 / summary.medianMs).toFixed(2)) : 0
 
     const result = createGameResult({
       score,
-      durationMs: totalMs,
+      durationMs: summary.totalMs,
       states: ['countdown', 'running', 'finished'],
       metrics: {
         rounds: TOTAL_ROUNDS,
-        average_ms: avg,
-        median_ms: med,
-        best_ms: best,
-        worst_ms: worst,
+        average_ms: summary.averageMs,
+        median_ms: summary.medianMs,
+        best_ms: summary.bestMs,
+        worst_ms: summary.worstMs,
+        n_excluded: summary.excludedCount,
         ...Object.fromEntries(times.map((t, i) => [`round_${i + 1}_ms`, t])),
       },
     })
@@ -229,10 +256,9 @@ export function useReactionGame(options: UseReactionGameOptions) {
     () => (phase.value === 'idle' || phase.value === 'finished') && !isBusy.value,
   )
 
-  const averageMs = computed(() => {
-    const times = roundResults.value.map((r) => r.reactionMs)
-    return times.length > 0 ? Math.round(times.reduce((a, b) => a + b, 0) / times.length) : 0
-  })
+  const medianMs = computed(() =>
+    summarizeReactionTimes(roundResults.value.map((r) => r.reactionMs)).medianMs,
+  )
 
   return {
     // Game state
@@ -250,7 +276,7 @@ export function useReactionGame(options: UseReactionGameOptions) {
     lastResult: session.lastResult,
 
     // Derived
-    averageMs,
+    medianMs,
 
     // Actions
     startGame,
