@@ -132,13 +132,17 @@ SELECT
     gs.user_id,
     gs.game_code,
     p.username,
-    MAX(gs.score) AS best_score,
+    CASE
+        WHEN gm.metric_direction = 'lower_is_better' THEN MIN(gs.score)
+        ELSE MAX(gs.score)
+    END AS best_score,
     AVG(gs.score) AS avg_score,
     COUNT(*) AS session_count
 FROM public.game_sessions gs
 JOIN public.profiles p ON p.id = gs.user_id
+JOIN public.game_metadata gm ON gm.game_code = gs.game_code
 WHERE gs.status = 'completed' AND gs.score IS NOT NULL
-GROUP BY gs.user_id, gs.game_code, p.username;
+GROUP BY gs.user_id, gs.game_code, p.username, gm.metric_direction;
 
 -- CONSTRAINTS
 -- Ensure at most one correct asset per group
@@ -149,9 +153,11 @@ SELECT
     gs.game_code,
     gs.score,
     gs.completed_at,
+    gm.metric_direction,
     p.id AS user_id,
     p.username
 FROM public.game_sessions gs
+JOIN public.game_metadata gm ON gm.game_code = gs.game_code
 JOIN public.profiles p ON p.id = gs.user_id
 WHERE gs.status = 'completed' AND gs.score IS NOT NULL AND completed_at IS NOT NULL;
 

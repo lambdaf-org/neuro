@@ -132,10 +132,11 @@ pub async fn get_leaderboard(
     db: &SupabaseClient,
     game_code: &str,
 ) -> Result<Vec<LeaderboardEntry>, RepoError> {
+    let metadata = get_metadata_by_code(db, game_code).await?;
     let rows = db
         .select("leaderboard_view")
         .eq("game_code", game_code)
-        .order("score", false)
+        .order("score", metadata.metric_direction == "lower_is_better")
         .execute()
         .await
         .map_err(|e| {
