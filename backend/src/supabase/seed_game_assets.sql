@@ -13,7 +13,7 @@ VALUES
      'Psychomotor Speed',
      'Measures how quickly you can respond to a visual stimulus. A fundamental indicator of neural processing speed.',
      'Simple reaction time paradigms (Donders, 1869; Jensen, 2006) quantify stimulus-detection and motor-response latency, loading on CHC factor Gt.',
-     'Wait for a visual cue, then click/tap as fast as possible. Multiple trials are averaged.',
+     'Wait for a visual cue, then click/tap as fast as possible. Median valid reaction time is scored.',
      'Median RT (ms)',
      'lower_is_better',
      1),
