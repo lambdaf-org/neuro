@@ -37,6 +37,10 @@ export function useGameMetadata(options: UseGameMetadataOptions) {
       return
     }
 
+    if (metadata.value?.game_code !== normalizedGameCode) {
+      metadata.value = null
+    }
+
     isLoading.value = true
     errorMessage.value = ''
 
