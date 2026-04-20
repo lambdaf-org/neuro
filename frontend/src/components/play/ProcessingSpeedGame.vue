@@ -39,9 +39,7 @@ const taskSummary = computed(
     'Decide whether the target symbol appears in the set of candidates. Answer as many trials as you can before time runs out.',
 )
 const benchmarkLabel = computed(() => props.metadata?.metric_name || '')
-const choiceHint = computed(
-  () => 'Press Present if the target appears. Press Missing if it does not.',
-)
+const choiceHint = computed(() => 'Use the left and right arrow keys or tap the buttons below.')
 const remainingSecondsLabel = computed(() => (remainingMs.value / 1000).toFixed(1))
 const progressPercent = computed(() => Math.max(0, (remainingMs.value / durationMs) * 100))
 const gameSurface = ref<HTMLElement | null>(null)
@@ -62,19 +60,6 @@ function onSurfaceKeydown(event: KeyboardEvent): void {
   }
 
   if (event.key === 'ArrowRight') {
-    event.preventDefault()
-    answerMissing()
-    return
-  }
-
-  const normalizedKey = event.key.toLowerCase()
-  if (normalizedKey === 'y') {
-    event.preventDefault()
-    answerPresent()
-    return
-  }
-
-  if (normalizedKey === 'n') {
     event.preventDefault()
     answerMissing()
   }
@@ -108,7 +93,7 @@ watch(phase, async (nextPhase) => {
       :role="phase === 'running' ? 'group' : undefined"
       :aria-label="
         phase === 'running'
-          ? 'Symbol matching game. Press left or Y for present, right or N for missing.'
+          ? 'Symbol matching game. Press left for present or right for missing.'
           : undefined
       "
       @keydown="onSurfaceKeydown"
@@ -202,7 +187,7 @@ watch(phase, async (nextPhase) => {
             @click.stop="answerPresent"
           >
             <span>Present</span>
-            <span class="text-xs uppercase tracking-[0.08em] opacity-80">Left / Y</span>
+            <span class="text-xs uppercase tracking-[0.08em] opacity-80">Left</span>
           </UButton>
 
           <UButton
@@ -214,13 +199,11 @@ watch(phase, async (nextPhase) => {
             @click.stop="answerMissing"
           >
             <span>Missing</span>
-            <span class="text-xs uppercase tracking-[0.08em] opacity-80">Right / N</span>
+            <span class="text-xs uppercase tracking-[0.08em] opacity-80">Right</span>
           </UButton>
         </div>
 
-        <p class="max-w-md text-sm leading-6 text-toned">
-          Left arrow or Y = Present. Right arrow or N = Missing.
-        </p>
+        <p class="max-w-md text-sm leading-6 text-toned">Left arrow = Present. Right arrow = Missing.</p>
       </div>
 
       <div
