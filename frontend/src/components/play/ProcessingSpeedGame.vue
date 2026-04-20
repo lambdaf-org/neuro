@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 import { useProcessingSpeedGame } from '@/composables/useProcessingSpeedGame'
 import type { GameMetadata } from '@/lib/play/metadata'
@@ -44,23 +44,15 @@ const choiceHint = computed(
 )
 const remainingSecondsLabel = computed(() => (remainingMs.value / 1000).toFixed(1))
 const progressPercent = computed(() => Math.max(0, (remainingMs.value / durationMs) * 100))
+const gameSurface = ref<HTMLElement | null>(null)
 
-function onWindowKeydown(event: KeyboardEvent): void {
+function onSurfaceKeydown(event: KeyboardEvent): void {
   if (phase.value !== 'running') {
     return
   }
 
-  const target = event.target
-  if (target instanceof HTMLElement) {
-    const tagName = target.tagName
-    if (
-      tagName === 'INPUT' ||
-      tagName === 'TEXTAREA' ||
-      tagName === 'SELECT' ||
-      target.isContentEditable
-    ) {
-      return
-    }
+  if (event.target !== event.currentTarget) {
+    return
   }
 
   if (event.key === 'ArrowLeft') {
@@ -88,12 +80,13 @@ function onWindowKeydown(event: KeyboardEvent): void {
   }
 }
 
-onMounted(() => {
-  window.addEventListener('keydown', onWindowKeydown)
-})
+watch(phase, async (nextPhase) => {
+  if (nextPhase !== 'running') {
+    return
+  }
 
-onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onWindowKeydown)
+  await nextTick()
+  gameSurface.value?.focus()
 })
 </script>
 
@@ -109,12 +102,16 @@ onBeforeUnmount(() => {
     />
 
     <div
+      ref="gameSurface"
       class="play-surface p-6 sm:p-8"
+      :tabindex="phase === 'running' ? 0 : undefined"
+      :role="phase === 'running' ? 'group' : undefined"
       :aria-label="
         phase === 'running'
           ? 'Symbol matching game. Press left or Y for present, right or N for missing.'
           : undefined
       "
+      @keydown="onSurfaceKeydown"
     >
       <UButton
         v-if="phase !== 'idle' && phase !== 'finished'"

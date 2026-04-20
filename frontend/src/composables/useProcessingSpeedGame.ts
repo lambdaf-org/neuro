@@ -29,6 +29,7 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
 
   let countdownInterval: ReturnType<typeof setInterval> | null = null
   let clockInterval: ReturnType<typeof setInterval> | null = null
+  let finishTimeout: ReturnType<typeof setTimeout> | null = null
   let gameStartedAt: number | null = null
   let currentTrialStartedAt: number | null = null
   let hasFinished = false
@@ -44,6 +45,11 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
     if (clockInterval !== null) {
       clearInterval(clockInterval)
       clockInterval = null
+    }
+
+    if (finishTimeout !== null) {
+      clearTimeout(finishTimeout)
+      finishTimeout = null
     }
   }
 
@@ -119,6 +125,11 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
         void finishGame()
       }
     }, 100)
+
+    finishTimeout = setTimeout(() => {
+      remainingMs.value = 0
+      void finishGame()
+    }, GAME_DURATION_MS)
   }
 
   function runCountdown(onComplete: () => void): void {
@@ -138,7 +149,14 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
   }
 
   function answer(isPresentAnswer: boolean): void {
-    if (phase.value !== 'running' || !currentTrial.value) {
+    if (phase.value !== 'running' || !currentTrial.value || gameStartedAt === null) {
+      return
+    }
+
+    const elapsedMs = performance.now() - gameStartedAt
+    if (elapsedMs >= GAME_DURATION_MS) {
+      remainingMs.value = 0
+      void finishGame()
       return
     }
 
