@@ -245,8 +245,7 @@ export function useReactionGame(options: UseReactionGameOptions) {
   }
 
   onScopeDispose(() => {
-    session.invalidate()
-    clearTimers()
+    resetGame()
   })
 
   // ── Derived state ─────────────────────────────────────────────────────

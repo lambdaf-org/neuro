@@ -67,11 +67,48 @@ const isInteractive = computed(
     phase.value === 'result',
 )
 
+const zoneAriaLabel = computed(() => {
+  if (phase.value === 'waiting') {
+    return 'Reaction test area. Wait for the signal, then press Enter or Space as fast as you can.'
+  }
+
+  if (phase.value === 'signal') {
+    return 'Reaction test area. Signal shown. Press Enter or Space now.'
+  }
+
+  if (phase.value === 'tooEarly') {
+    return 'Reaction test area. Too early. Press Enter or Space to retry this round.'
+  }
+
+  if (phase.value === 'result') {
+    return 'Reaction test area. Round result shown. Press Enter or Space to continue.'
+  }
+
+  return undefined
+})
+
 function zoneClass(p: ReactionPhase): string {
   if (p === 'waiting') return 'zone-red'
   if (p === 'signal') return 'zone-green'
   if (p === 'tooEarly') return 'zone-amber'
   return 'zone-neutral'
+}
+
+function onZoneKeydown(event: KeyboardEvent): void {
+  if (!isInteractive.value) {
+    return
+  }
+
+  if (event.target !== event.currentTarget) {
+    return
+  }
+
+  if (event.key !== 'Enter' && event.key !== ' ') {
+    return
+  }
+
+  event.preventDefault()
+  onAreaClick()
 }
 </script>
 
@@ -89,7 +126,11 @@ function zoneClass(p: ReactionPhase): string {
     <div
       class="rt-zone"
       :class="[zoneClass(phase), isInteractive ? 'cursor-pointer select-none' : '']"
+      :role="isInteractive ? 'button' : undefined"
+      :tabindex="isInteractive ? 0 : undefined"
+      :aria-label="zoneAriaLabel"
       @click="isInteractive ? onAreaClick() : undefined"
+      @keydown="onZoneKeydown"
     >
       <div v-if="phase !== 'idle' && phase !== 'finished'" class="rt-round-pill">
         {{ currentRound }} / {{ totalRounds }}
@@ -249,6 +290,11 @@ function zoneClass(p: ReactionPhase): string {
 
 .rt-zone:active.cursor-pointer {
   transform: scale(0.998);
+}
+
+.rt-zone:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--ui-secondary) 55%, white);
+  outline-offset: 3px;
 }
 
 .rt-content {
