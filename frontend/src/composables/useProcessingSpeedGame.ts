@@ -29,7 +29,6 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
 
   let countdownInterval: ReturnType<typeof setInterval> | null = null
   let clockInterval: ReturnType<typeof setInterval> | null = null
-  let finishTimeout: ReturnType<typeof setTimeout> | null = null
   let gameStartedAt: number | null = null
   let currentTrialStartedAt: number | null = null
   let hasFinished = false
@@ -45,11 +44,6 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
     if (clockInterval !== null) {
       clearInterval(clockInterval)
       clockInterval = null
-    }
-
-    if (finishTimeout !== null) {
-      clearTimeout(finishTimeout)
-      finishTimeout = null
     }
   }
 
@@ -125,11 +119,6 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
         void finishGame()
       }
     }, 100)
-
-    finishTimeout = setTimeout(() => {
-      remainingMs.value = 0
-      void finishGame()
-    }, GAME_DURATION_MS)
   }
 
   function runCountdown(onComplete: () => void): void {
@@ -207,7 +196,6 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
     remainingMs,
     durationMs: GAME_DURATION_MS,
     currentTrial,
-    attempts,
     score: computed(() => summary.value.correctAnswers),
     totalAnswers: computed(() => summary.value.totalAnswers),
     incorrectAnswers: computed(() => summary.value.incorrectAnswers),

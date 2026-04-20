@@ -39,7 +39,9 @@ const taskSummary = computed(
     'Decide whether the target symbol appears in the set of candidates. Answer as many trials as you can before time runs out.',
 )
 const benchmarkLabel = computed(() => props.metadata?.metric_name || '')
-const choiceHint = computed(() => 'Press Present if the target appears. Press Missing if it does not.')
+const choiceHint = computed(
+  () => 'Press Present if the target appears. Press Missing if it does not.',
+)
 const remainingSecondsLabel = computed(() => (remainingMs.value / 1000).toFixed(1))
 const progressPercent = computed(() => Math.max(0, (remainingMs.value / durationMs) * 100))
 
@@ -107,7 +109,7 @@ onBeforeUnmount(() => {
     />
 
     <div
-      class="ps-panel relative flex items-center justify-center p-6 sm:p-8"
+      class="play-surface p-6 sm:p-8"
       :aria-label="
         phase === 'running'
           ? 'Symbol matching game. Press left or Y for present, right or N for missing.'
@@ -121,21 +123,19 @@ onBeforeUnmount(() => {
         variant="ghost"
         size="sm"
         square
-        class="absolute right-4 top-4"
+        class="play-surface__reset"
         :disabled="isBusy"
         @click.stop="resetGame"
       />
 
-      <div v-if="phase === 'idle'" class="flex max-w-md flex-col items-center gap-4 text-center">
-        <div class="ps-icon-wrap">
+      <div v-if="phase === 'idle'" class="play-surface__content">
+        <div class="play-surface__icon">
           <UIcon name="i-lucide-scan-search" class="h-8 w-8 text-secondary" />
         </div>
-        <p class="text-xl font-semibold text-highlighted">{{ displayName }}</p>
-        <p class="max-w-md text-sm leading-6 text-toned">{{ taskSummary }}</p>
-        <p class="max-w-md text-sm leading-6 text-toned">{{ choiceHint }}</p>
-        <p v-if="benchmarkLabel" class="text-xs uppercase tracking-[0.08em] text-toned">
-          Benchmark: {{ benchmarkLabel }}
-        </p>
+        <p class="play-surface__title">{{ displayName }}</p>
+        <p class="play-surface__text">{{ taskSummary }}</p>
+        <p class="play-surface__text">{{ choiceHint }}</p>
+        <p v-if="benchmarkLabel" class="play-surface__meta">Benchmark: {{ benchmarkLabel }}</p>
         <UButton
           color="secondary"
           size="lg"
@@ -148,14 +148,17 @@ onBeforeUnmount(() => {
         </UButton>
       </div>
 
-      <div v-else-if="phase === 'countdown'" class="flex flex-col items-center gap-4 text-center">
-        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-toned">Get ready</p>
-        <p class="text-[3.2rem] font-bold leading-none text-highlighted sm:text-[4rem]">
+      <div v-else-if="phase === 'countdown'" class="play-surface__content">
+        <p class="play-surface__eyebrow">Get ready</p>
+        <p class="play-surface__display">
           {{ countdownRemaining }}
         </p>
       </div>
 
-      <div v-else-if="phase === 'running'" class="flex w-full max-w-xl flex-col items-center gap-4 text-center">
+      <div
+        v-else-if="phase === 'running'"
+        class="play-surface__content play-surface__content--wide max-w-xl"
+      >
         <div class="flex w-full items-center justify-between gap-3">
           <UBadge color="secondary" variant="soft" size="lg">Score {{ score }}</UBadge>
           <UBadge color="neutral" variant="soft" size="lg">{{ remainingSecondsLabel }}s</UBadge>
@@ -177,7 +180,9 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="space-y-2">
-            <p class="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-toned">Candidates</p>
+            <p class="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-toned">
+              Candidates
+            </p>
             <div class="grid grid-cols-2 gap-3">
               <div
                 v-for="(symbol, index) in currentTrial.candidates"
@@ -221,14 +226,15 @@ onBeforeUnmount(() => {
         </p>
       </div>
 
-      <div v-else-if="phase === 'finished'" class="flex w-full max-w-md flex-col items-center gap-4 text-center">
+      <div
+        v-else-if="phase === 'finished'"
+        class="play-surface__content play-surface__content--wide max-w-md"
+      >
         <UBadge color="secondary" variant="soft" size="lg">Final score {{ score }}</UBadge>
 
         <div class="space-y-2">
-          <p class="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-toned">
-            Correct answers in 20 seconds
-          </p>
-          <p class="text-[3.2rem] font-bold leading-none text-highlighted sm:text-[4rem]">
+          <p class="play-surface__eyebrow">Correct answers in 20 seconds</p>
+          <p class="play-surface__display">
             {{ score }}
           </p>
         </div>
@@ -271,27 +277,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.ps-panel {
-  min-height: 22rem;
-  overflow: hidden;
-  border-radius: 1rem;
-  border: 1px solid color-mix(in oklab, var(--ui-border) 82%, transparent);
-  background: color-mix(in oklab, var(--ui-bg-elevated) 42%, transparent);
-  box-shadow: 0 8px 16px -8px color-mix(in oklab, var(--ui-secondary) 20%, transparent);
-  backdrop-filter: blur(8px);
-}
-
-.ps-icon-wrap {
-  display: inline-flex;
-  height: 4rem;
-  width: 4rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1rem;
-  border: 1px solid color-mix(in oklab, var(--ui-secondary) 32%, transparent);
-  background: color-mix(in oklab, var(--ui-secondary) 12%, transparent);
-}
-
 .ps-target {
   display: inline-flex;
   min-width: 5.5rem;
