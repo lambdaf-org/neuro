@@ -64,9 +64,11 @@ export function createProcessingSpeedTrial(
   options: CreateProcessingSpeedTrialOptions = {},
 ): ProcessingSpeedTrial {
   const random = options.random ?? Math.random
-  const candidateCount = Math.max(2, Math.round(options.candidateCount ?? 4))
+  const requestedCandidateCount = Math.max(2, Math.round(options.candidateCount ?? 4))
   const target = SYMBOL_POOL[pickIndex(SYMBOL_POOL.length, random)]!
   const isMatchPresent = options.isMatchPresent ?? random() >= 0.5
+  const maxCandidateCount = isMatchPresent ? SYMBOL_POOL.length : SYMBOL_POOL.length - 1
+  const candidateCount = Math.min(requestedCandidateCount, maxCandidateCount)
   const distractorPool = SYMBOL_POOL.filter((symbol) => symbol !== target)
   const distractorCount = isMatchPresent ? candidateCount - 1 : candidateCount
   const distractors = sampleUniqueSymbols(distractorPool, distractorCount, random)
