@@ -42,6 +42,12 @@ const benchmarkLabel = computed(() => props.metadata?.metric_name || '')
 const choiceHint = computed(() => 'Use the left and right arrow keys or tap the buttons below.')
 const remainingSecondsLabel = computed(() => (remainingMs.value / 1000).toFixed(1))
 const progressPercent = computed(() => Math.max(0, (remainingMs.value / durationMs) * 100))
+const resultStats = computed(() => [
+  { label: 'Attempts', value: totalAnswers.value },
+  { label: 'Wrong', value: incorrectAnswers.value },
+  { label: 'Accuracy', value: `${accuracyPercent.value}%` },
+  { label: 'Avg. response', value: `${averageResponseMs.value} ms` },
+])
 const gameSurface = ref<HTMLElement | null>(null)
 
 function onSurfaceKeydown(event: KeyboardEvent): void {
@@ -221,12 +227,7 @@ watch(phase, async (nextPhase) => {
 
         <div class="grid w-full grid-cols-2 gap-3">
           <UCard
-            v-for="item in [
-              { label: 'Attempts', value: totalAnswers },
-              { label: 'Wrong', value: incorrectAnswers },
-              { label: 'Accuracy', value: `${accuracyPercent}%` },
-              { label: 'Avg. response', value: `${averageResponseMs} ms` },
-            ]"
+            v-for="item in resultStats"
             :key="item.label"
             variant="subtle"
             :ui="{ body: 'p-4' }"
