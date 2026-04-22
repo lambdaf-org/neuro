@@ -1,8 +1,8 @@
-@import "tailwindcss";
-@import "@nuxt/ui";
+@import 'tailwindcss';
+@import '@nuxt/ui';
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", "Segoe UI Variable", "Segoe UI", sans-serif;
+  --font-sans: 'Plus Jakarta Sans', 'Segoe UI Variable', 'Segoe UI', sans-serif;
 }
 
 :root {
@@ -57,6 +57,109 @@
 body {
   min-height: 100svh;
   background-image:
-    radial-gradient(circle at 0% 0%, color-mix(in oklab, var(--ui-primary) 14%, transparent), transparent 45%),
-    radial-gradient(circle at 100% 100%, color-mix(in oklab, var(--ui-secondary) 14%, transparent), transparent 45%);
+    radial-gradient(
+      circle at 0% 0%,
+      color-mix(in oklab, var(--ui-primary) 14%, transparent),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 100% 100%,
+      color-mix(in oklab, var(--ui-secondary) 14%, transparent),
+      transparent 45%
+    );
+}
+
+.play-surface {
+  position: relative;
+  display: flex;
+  min-height: 22rem;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in oklab, var(--ui-border) 82%, transparent);
+  background: color-mix(in oklab, var(--ui-bg-elevated) 42%, transparent);
+  box-shadow: 0 8px 16px -8px color-mix(in oklab, var(--ui-secondary) 20%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.play-surface__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.play-surface__content--wide {
+  width: 100%;
+}
+
+.play-surface__pill {
+  position: absolute;
+  top: 1rem;
+  left: 1.25rem;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in oklab, var(--ui-border) 50%, transparent);
+  background: color-mix(in oklab, var(--ui-bg-elevated) 60%, transparent);
+  padding: 0.2rem 0.6rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--ui-text-toned) 70%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.play-surface__reset {
+  position: absolute;
+  top: 0.9rem;
+  right: 1.1rem;
+}
+
+.play-surface__icon {
+  display: inline-flex;
+  height: 4rem;
+  width: 4rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in oklab, var(--ui-secondary) 32%, transparent);
+  background: color-mix(in oklab, var(--ui-secondary) 12%, transparent);
+}
+
+.play-surface__eyebrow {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ui-text-toned);
+}
+
+.play-surface__title {
+  font-size: clamp(1.25rem, 3vw, 1.5rem);
+  font-weight: 600;
+  color: var(--ui-text-highlighted);
+}
+
+.play-surface__display {
+  font-size: clamp(3.2rem, 10vw, 4rem);
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ui-text-highlighted);
+}
+
+.play-surface__text {
+  max-width: 36rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--ui-text-toned);
+}
+
+.play-surface__meta {
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--ui-text-toned) 88%, transparent);
 }
