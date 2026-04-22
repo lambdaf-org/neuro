@@ -14,6 +14,7 @@ import { findPlayModuleById } from '@/lib/play/modules'
  */
 const GAME_REGISTRY: Partial<Record<GameId, ReturnType<typeof defineAsyncComponent>>> = {
   'reaction-time': defineAsyncComponent(() => import('@/components/play/ReactionTestGame.vue')),
+  'processing-speed': defineAsyncComponent(() => import('@/components/play/ProcessingSpeedGame.vue')),
 }
 
 const route = useRoute()

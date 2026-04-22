@@ -24,19 +24,21 @@ function onCardKeydown(event: KeyboardEvent): void {
 </script>
 
 <template>
-  <div
-    class="play-module-tile group relative h-full cursor-pointer rounded-xl border border-default/50 bg-elevated/40 p-5 backdrop-blur-sm transition-all"
+  <UCard
+    variant="subtle"
     tabindex="0"
     role="link"
     :aria-label="`Open ${module.name} module`"
+    class="group h-full cursor-pointer border border-default/50 transition-all duration-150 hover:-translate-y-0.5 hover:border-secondary/40 hover:shadow-lg hover:shadow-secondary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40"
+    :ui="{
+      body: 'p-5 sm:p-6',
+    }"
     @click="openModule"
     @keydown="onCardKeydown"
   >
     <div class="space-y-4">
       <div class="flex items-start justify-between gap-3">
-        <div
-          class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-secondary/30 bg-secondary/10"
-        >
+        <div class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-secondary/30 bg-secondary/10">
           <UIcon :name="module.icon" class="h-5 w-5 text-secondary" />
         </div>
         <UBadge color="secondary" variant="soft" size="sm">
@@ -49,19 +51,5 @@ function onCardKeydown(event: KeyboardEvent): void {
         <p class="text-sm leading-6 text-toned">{{ module.description }}</p>
       </div>
     </div>
-  </div>
+  </UCard>
 </template>
-
-<style scoped>
-.play-module-tile {
-  outline: none;
-}
-
-.play-module-tile:hover,
-.play-module-tile:focus-visible {
-  border-color: color-mix(in oklab, var(--ui-secondary) 30%, var(--ui-border));
-  background: color-mix(in oklab, var(--ui-elevated) 50%, transparent);
-  box-shadow: 0 8px 16px -8px color-mix(in oklab, var(--ui-secondary) 20%, transparent);
-  transform: translateY(-2px);
-}
-</style>

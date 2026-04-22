@@ -113,7 +113,7 @@ function onZoneKeydown(event: KeyboardEvent): void {
 </script>
 
 <template>
-  <div class="rt-root">
+  <div class="w-full">
     <UAlert
       v-if="errorMessage"
       color="error"
@@ -124,7 +124,7 @@ function onZoneKeydown(event: KeyboardEvent): void {
     />
 
     <div
-      class="rt-zone"
+      class="play-surface rt-zone"
       :class="[zoneClass(phase), isInteractive ? 'cursor-pointer select-none' : '']"
       :role="isInteractive ? 'button' : undefined"
       :tabindex="isInteractive ? 0 : undefined"
@@ -132,30 +132,29 @@ function onZoneKeydown(event: KeyboardEvent): void {
       @click="isInteractive ? onAreaClick() : undefined"
       @keydown="onZoneKeydown"
     >
-      <div v-if="phase !== 'idle' && phase !== 'finished'" class="rt-round-pill">
+      <div v-if="phase !== 'idle' && phase !== 'finished'" class="play-surface__pill">
         {{ currentRound }} / {{ totalRounds }}
       </div>
 
-      <button
+      <UButton
         v-if="phase !== 'idle' && phase !== 'finished'"
-        class="rt-reset-btn"
+        icon="i-lucide-x"
+        color="neutral"
+        variant="ghost"
+        size="sm"
+        square
+        class="play-surface__reset"
         :disabled="isBusy"
         @click.stop="resetGame"
-      >
-        <UIcon name="i-lucide-x" class="h-4 w-4" />
-      </button>
+      />
 
-      <div v-if="phase === 'idle'" class="rt-content">
-        <div class="rt-icon-wrap">
+      <div v-if="phase === 'idle'" class="play-surface__content">
+        <div class="play-surface__icon">
           <UIcon name="i-lucide-mouse-pointer-click" class="h-8 w-8 text-secondary" />
         </div>
-        <p class="rt-headline">{{ displayName }}</p>
-        <p class="rt-sub">
-          {{ taskSummary }} {{ totalRounds }} rounds.
-        </p>
-        <p v-if="benchmarkLabel" class="rt-benchmark">
-          Benchmark: {{ benchmarkLabel }}
-        </p>
+        <p class="play-surface__title">{{ displayName }}</p>
+        <p class="play-surface__text">{{ taskSummary }} {{ totalRounds }} rounds.</p>
+        <p v-if="benchmarkLabel" class="play-surface__meta">Benchmark: {{ benchmarkLabel }}</p>
         <UButton
           color="secondary"
           size="lg"
@@ -168,45 +167,52 @@ function onZoneKeydown(event: KeyboardEvent): void {
         </UButton>
       </div>
 
-      <div v-else-if="phase === 'countdown'" class="rt-content">
-        <p class="rt-label">Get ready</p>
-        <p class="rt-huge">{{ countdownRemaining }}</p>
+      <div v-else-if="phase === 'countdown'" class="play-surface__content">
+        <p class="play-surface__eyebrow">Get ready</p>
+        <p class="play-surface__display">{{ countdownRemaining }}</p>
       </div>
 
-      <div v-else-if="phase === 'waiting'" class="rt-content">
+      <div v-else-if="phase === 'waiting'" class="play-surface__content">
         <UIcon name="i-lucide-hand" class="h-14 w-14 text-white/80" />
-        <p class="rt-huge text-white">Wait...</p>
+        <p class="play-surface__display text-white">Wait...</p>
         <p class="rt-sub-light">Don't click yet</p>
       </div>
 
-      <div v-else-if="phase === 'signal'" class="rt-content">
+      <div v-else-if="phase === 'signal'" class="play-surface__content">
         <UIcon name="i-lucide-zap" class="h-14 w-14 text-white animate-bounce" />
-        <p class="rt-huge text-white">Click!</p>
+        <p class="play-surface__display text-white">Click!</p>
       </div>
 
-      <div v-else-if="phase === 'tooEarly'" class="rt-content">
+      <div v-else-if="phase === 'tooEarly'" class="play-surface__content">
         <UIcon name="i-lucide-alert-triangle" class="h-14 w-14 text-white/80" />
-        <p class="rt-huge text-white">Too early</p>
+        <p class="play-surface__display text-white">Too early</p>
         <p class="rt-sub-light">Tap to retry this round</p>
       </div>
 
-      <div v-else-if="phase === 'result'" class="rt-content">
+      <div v-else-if="phase === 'result'" class="play-surface__content">
         <UBadge :color="ratingColor(lastRoundMs)" variant="soft" size="lg">
           {{ ratingLabel(lastRoundMs) }}
         </UBadge>
-        <p class="rt-huge">{{ lastRoundMs }}<span class="text-2xl text-toned"> ms</span></p>
-        <p class="rt-label text-dimmed">
+        <p class="play-surface__display">
+          {{ lastRoundMs }}<span class="text-2xl text-toned"> ms</span>
+        </p>
+        <p class="play-surface__eyebrow text-dimmed">
           Round {{ currentRound }} of {{ totalRounds }} - tap to continue
         </p>
       </div>
 
-      <div v-else-if="phase === 'finished'" class="rt-content w-full max-w-sm">
+      <div
+        v-else-if="phase === 'finished'"
+        class="play-surface__content play-surface__content--wide w-full max-w-sm"
+      >
         <UBadge :color="ratingColor(medianMs)" variant="soft" size="lg">
           {{ ratingLabel(medianMs) }}
         </UBadge>
         <div>
-          <p class="rt-label text-toned">Median reaction time</p>
-          <p class="rt-huge">{{ medianMs }}<span class="text-2xl text-toned"> ms</span></p>
+          <p class="play-surface__eyebrow text-toned">Median reaction time</p>
+          <p class="play-surface__display">
+            {{ medianMs }}<span class="text-2xl text-toned"> ms</span>
+          </p>
         </div>
 
         <div class="w-full space-y-1.5">
@@ -243,21 +249,7 @@ function onZoneKeydown(event: KeyboardEvent): void {
 </template>
 
 <style scoped>
-.rt-root {
-  width: 100%;
-}
-
 .rt-zone {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 22rem;
-  border-radius: 1rem;
-  overflow: hidden;
-  border: 1px solid color-mix(in oklab, var(--ui-border) 82%, transparent);
-  background: color-mix(in oklab, var(--ui-bg-elevated) 42%, transparent);
-  backdrop-filter: blur(8px);
   transition:
     background-color 120ms ease,
     border-color 120ms ease,
@@ -297,106 +289,8 @@ function onZoneKeydown(event: KeyboardEvent): void {
   outline-offset: 3px;
 }
 
-.rt-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 2.5rem 1.5rem;
-  text-align: center;
-}
-
-.rt-round-pill {
-  position: absolute;
-  top: 1rem;
-  left: 1.25rem;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: color-mix(in oklab, var(--ui-text-toned) 70%, transparent);
-  background: color-mix(in oklab, var(--ui-bg-elevated) 60%, transparent);
-  border: 1px solid color-mix(in oklab, var(--ui-border) 50%, transparent);
-  padding: 0.2rem 0.6rem;
-  border-radius: 9999px;
-  backdrop-filter: blur(6px);
-}
-
-.rt-reset-btn {
-  position: absolute;
-  top: 0.9rem;
-  right: 1.1rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: 9999px;
-  color: color-mix(in oklab, var(--ui-text-toned) 60%, transparent);
-  background: color-mix(in oklab, var(--ui-bg-elevated) 50%, transparent);
-  border: 1px solid color-mix(in oklab, var(--ui-border) 50%, transparent);
-  cursor: pointer;
-  transition: opacity 120ms;
-  backdrop-filter: blur(6px);
-}
-
-.rt-reset-btn:hover:not(:disabled) {
-  opacity: 0.8;
-}
-
-.rt-reset-btn:disabled {
-  opacity: 0.35;
-  cursor: default;
-}
-
-.rt-icon-wrap {
-  display: inline-flex;
-  height: 4rem;
-  width: 4rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1rem;
-  border: 1px solid color-mix(in oklab, var(--ui-secondary) 32%, transparent);
-  background: color-mix(in oklab, var(--ui-secondary) 12%, transparent);
-}
-
-.rt-headline {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--ui-text-highlighted);
-}
-
-.rt-huge {
-  font-size: 4rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--ui-text-highlighted);
-}
-
-.rt-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ui-text-toned);
-}
-
-.rt-sub {
-  font-size: 0.875rem;
-  line-height: 1.6;
-  color: var(--ui-text-toned);
-  max-width: 22rem;
-}
-
 .rt-sub-light {
   font-size: 0.875rem;
   color: rgba(255, 255, 255, 0.65);
-}
-
-.rt-benchmark {
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: color-mix(in oklab, var(--ui-text-toned) 88%, transparent);
 }
 </style>
