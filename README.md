@@ -44,7 +44,7 @@ Each game targets a single narrow ability so that the resulting score profile is
 |---|---|
 | **CHC Factor** | Gf, Fluid Reasoning |
 | **Domain** | Inductive and figural reasoning |
-| **Task** | A visual pattern with a missing element is presented. The user selects the correct completion from four options. Each asset group provides one reference image and four option images, one of which is correct. |
+| **Task** | A visual pattern with a missing element is presented. The user selects the correct completion from four options. Each asset group provides one matrix image and four option images, one of which is correct. |
 | **Metric** | Accuracy as percent correct (higher is better). |
 | **Basis** | Matrix-reasoning tasks (Raven, 1938; Cattell, 1963) are the prototypical markers of fluid intelligence. Gf is the single best predictor of learning and novel problem-solving. |
 
@@ -114,7 +114,7 @@ game-assets/
         └── reference.svg
 ```
 
-Each group contains a reference image and four options. The public URL pattern is:
+Each group contains one prompt image and four options. For `gf` the prompt image is `matrix.svg`; for `gv` it is `reference.svg`. The public URL pattern is:
 ```
 https://<project>.supabase.co/storage/v1/object/public/game-assets/<game_code>/<group>/<file>
 ```
