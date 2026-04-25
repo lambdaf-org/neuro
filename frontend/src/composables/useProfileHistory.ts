@@ -6,7 +6,11 @@ import { PLAY_MODULES, type GameId, type PlayModule } from '@/lib/play/modules'
 import { getErrorMessage } from '@/lib/utils/errorHandling'
 import { useAuthStore } from '@/stores/auth'
 
-const PROFILE_HISTORY_GAME_IDS = new Set<GameId>(['reaction-time', 'processing-speed'])
+const PROFILE_HISTORY_GAME_IDS = new Set<GameId>([
+  'reaction-time',
+  'processing-speed',
+  'fluid-intelligence',
+])
 
 const PROFILE_HISTORY_MODULES = PLAY_MODULES.filter((module) =>
   PROFILE_HISTORY_GAME_IDS.has(module.id),
