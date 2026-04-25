@@ -65,7 +65,7 @@ function formatScore(value: number): string {
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="space-y-1">
               <h2 class="text-lg font-semibold text-highlighted">Game Sessions</h2>
-              <p class="text-sm text-toned">Reaction Time and Processing Speed sessions.</p>
+              <p class="text-sm text-toned">Active benchmark sessions.</p>
             </div>
 
             <UButton
@@ -91,7 +91,7 @@ function formatScore(value: number): string {
 
           <div v-if="isLoading" class="grid gap-4 md:grid-cols-2">
             <UCard
-              v-for="index in 2"
+              v-for="index in 3"
               :key="index"
               variant="subtle"
               class="border border-default/50"
@@ -120,7 +120,7 @@ function formatScore(value: number): string {
             variant="subtle"
             icon="i-lucide-history"
             title="No sessions yet"
-            description="Play Reaction Time or Processing Speed to see your results here."
+            description="Play an active benchmark to see your results here."
             :actions="[
               {
                 label: 'Start playing',
