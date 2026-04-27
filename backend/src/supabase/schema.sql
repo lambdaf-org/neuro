@@ -70,8 +70,11 @@ CREATE TABLE public.game_sessions (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
     game_code    TEXT NOT NULL,
-    status       TEXT NOT NULL DEFAULT 'in_progress',
-    score        DOUBLE PRECISION,
+    status       TEXT NOT NULL DEFAULT 'in_progress'
+        CHECK (status IN ('in_progress', 'completed', 'invalid')),
+    metric_value DOUBLE PRECISION,
+    metrics      JSONB,
+    scoring_version INT,
     started_at   TIMESTAMPTZ DEFAULT now(),
     completed_at TIMESTAMPTZ
 );
@@ -128,17 +131,37 @@ CREATE INDEX idx_assets_group   ON public.game_assets(group_id);
 CREATE INDEX idx_metadata_active ON public.game_metadata(is_active, sort_order);
 
 CREATE VIEW public.player_stats_view AS
+WITH completed_sessions AS (
+    SELECT
+        gs.user_id,
+        gs.game_code,
+        gs.metric_value,
+        gs.completed_at,
+        gm.metric_direction,
+        p.username,
+        ROW_NUMBER() OVER (
+            PARTITION BY gs.user_id, gs.game_code
+            ORDER BY gs.completed_at DESC NULLS LAST
+        ) AS latest_rank
+    FROM public.game_sessions gs
+    JOIN public.profiles p ON p.id = gs.user_id
+    JOIN public.game_metadata gm ON gm.game_code = gs.game_code
+    WHERE gs.status = 'completed' AND gs.metric_value IS NOT NULL AND gs.completed_at IS NOT NULL
+)
 SELECT
-    gs.user_id,
-    gs.game_code,
-    p.username,
-    MAX(gs.score) AS best_score,
-    AVG(gs.score) AS avg_score,
-    COUNT(*) AS session_count
-FROM public.game_sessions gs
-JOIN public.profiles p ON p.id = gs.user_id
-WHERE gs.status = 'completed' AND gs.score IS NOT NULL
-GROUP BY gs.user_id, gs.game_code, p.username;
+    user_id,
+    game_code,
+    username,
+    MAX(CASE WHEN latest_rank = 1 THEN metric_value END) AS latest_metric,
+    CASE
+        WHEN MAX(metric_direction) = 'lower_is_better' THEN MIN(metric_value)
+        ELSE MAX(metric_value)
+    END AS best_metric,
+    AVG(metric_value) AS avg_metric,
+    COUNT(*) AS session_count,
+    MAX(completed_at) AS completed_at
+FROM completed_sessions
+GROUP BY user_id, game_code, username;
 
 -- CONSTRAINTS
 -- Ensure at most one correct asset per group
@@ -147,14 +170,16 @@ CREATE UNIQUE INDEX idx_one_correct_per_group ON public.game_assets(group_id) WH
 CREATE VIEW public.leaderboard_view AS
 SELECT
     gs.game_code,
-    gs.score,
+    gs.metric_value,
     gs.completed_at,
+    gm.metric_direction,
     p.id AS user_id,
     p.username
 FROM public.game_sessions gs
 JOIN public.profiles p ON p.id = gs.user_id
-WHERE gs.status = 'completed' AND gs.score IS NOT NULL AND completed_at IS NOT NULL;
+JOIN public.game_metadata gm ON gm.game_code = gs.game_code
+WHERE gs.status = 'completed' AND gs.metric_value IS NOT NULL AND completed_at IS NOT NULL;
 
 CREATE INDEX idx_sessions_leaderboard
-    ON public.game_sessions(game_code, score DESC)
-    WHERE status = 'completed' AND score IS NOT NULL;
+    ON public.game_sessions(game_code, metric_value)
+    WHERE status = 'completed' AND metric_value IS NOT NULL;

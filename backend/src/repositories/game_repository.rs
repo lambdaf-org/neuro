@@ -1,10 +1,11 @@
+use serde_json::Value;
 use serde_json::json;
 use supabase_rs::SupabaseClient;
 use uuid::Uuid;
 
 use crate::errors::custom_errors::RepoError;
-use crate::models::game::GameMetadata;
 use crate::models::game::GameEvent;
+use crate::models::game::GameMetadata;
 use crate::models::game::GameSession;
 use crate::models::game::LeaderboardEntry;
 use crate::models::game::PlayerStats;
@@ -41,7 +42,10 @@ pub async fn create_session(
 pub async fn finalize_session(
     db: &SupabaseClient,
     session_id: Uuid,
-    score: f64,
+    status: &str,
+    metric_value: Option<f64>,
+    metrics: Value,
+    scoring_version: i32,
 ) -> Result<(), RepoError> {
     let session_id = session_id.to_string();
     let db_result = db
@@ -49,9 +53,10 @@ pub async fn finalize_session(
             "game_sessions",
             &session_id,
             json!({
-                "score": score,
-                // TODO: Make enumeration out of it
-                "status": "completed",
+                "metric_value": metric_value,
+                "metrics": metrics,
+                "scoring_version": scoring_version,
+                "status": status,
                 "completed_at": chrono::Utc::now().to_rfc3339(),
             }),
         )
@@ -132,10 +137,13 @@ pub async fn get_leaderboard(
     db: &SupabaseClient,
     game_code: &str,
 ) -> Result<Vec<LeaderboardEntry>, RepoError> {
+    let metadata = get_metadata_by_code(db, game_code).await?;
+    let ascending = metadata.metric_direction == "lower_is_better";
+
     let rows = db
         .select("leaderboard_view")
         .eq("game_code", game_code)
-        .order("score", false)
+        .order("metric_value", ascending)
         .execute()
         .await
         .map_err(|e| {
