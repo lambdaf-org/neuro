@@ -1,18 +1,52 @@
 use crate::models::validate::Validate;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Deserialize, ToSchema)]
 pub struct FinalizeSessionReq {
-    pub score: f64,
+    #[serde(default)]
+    pub trials: Vec<TrialPayload>,
+    pub client_ts: Option<String>,
+    pub score: Option<f64>,
 }
+
+#[derive(Deserialize, Serialize, ToSchema, Clone)]
+pub struct TrialPayload {
+    pub ms: Option<f64>,
+    pub span: Option<i32>,
+    pub correct: Option<bool>,
+    pub magnitude: Option<f64>,
+}
+
 impl Validate for FinalizeSessionReq {
     fn validate(&self) -> Result<(), Vec<&'static str>> {
         let mut errors = Vec::new();
-        if self.score < 0.0 {
-            errors.push("score must be non-negative");
+
+        if self.trials.is_empty() && self.score.is_none() {
+            errors.push("trials or legacy score is required");
         }
+
+        if self.trials.len() > 1000 {
+            errors.push("trials must not exceed 1000 entries");
+        }
+
+        if let Some(score) = self.score {
+            if score < 0.0 {
+                errors.push("score must be non-negative");
+            }
+        }
+
+        if let Some(client_ts) = &self.client_ts {
+            let ts = client_ts.trim();
+            if ts.is_empty() {
+                errors.push("client_ts must not be empty");
+            } else if chrono::DateTime::parse_from_rfc3339(ts).is_err() {
+                errors.push("client_ts must be a valid RFC3339 timestamp");
+            }
+        }
+
         if errors.is_empty() {
             Ok(())
         } else {
@@ -26,6 +60,24 @@ pub struct CreateGameEventReq {
     pub round: i32,
     pub event_value: f64,
     pub client_ts: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct GameEventAck {
+    pub id: Uuid,
+    pub round: i32,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct GameEventWsAck {
+    pub message_type: String,
+    pub event: GameEventAck,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct GameEventWsError {
+    pub message_type: String,
+    pub error: String,
 }
 
 impl Validate for CreateGameEventReq {
@@ -66,7 +118,9 @@ pub struct GameSession {
     pub game_code: String,
     pub status: String,
     // Can be empty since game can be in progress
-    pub score: Option<f64>,
+    pub metric_value: Option<f64>,
+    pub metrics: Option<Value>,
+    pub scoring_version: Option<i32>,
     pub started_at: String,
     // Can be empty since game can be in progress
     pub completed_at: Option<String>,
@@ -74,9 +128,10 @@ pub struct GameSession {
 
 #[derive(Deserialize, Serialize, ToSchema)]
 pub struct LeaderboardEntry {
+    pub game_code: String,
     pub user_id: Uuid,
     pub username: String,
-    pub score: f64,
+    pub metric_value: f64,
     pub completed_at: String,
 }
 
@@ -85,8 +140,9 @@ pub struct PlayerStats {
     pub user_id: Uuid,
     pub username: String,
     pub game_code: String,
-    pub best_score: f64,
-    pub avg_score: f64,
+    pub latest_metric: f64,
+    pub best_metric: f64,
+    pub avg_metric: f64,
     pub session_count: i64,
     pub completed_at: Option<String>,
 }

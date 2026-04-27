@@ -1,14 +1,21 @@
+use actix_web::HttpRequest;
 use actix_web::HttpResponse;
+use actix_web::Result;
 use actix_web::web;
+use futures_util::StreamExt;
 use serde_json::json;
 use uuid::Uuid;
 
 use crate::models::app_state::AppState;
+use crate::models::game::GameEventAck;
 use crate::models::game::CreateGameEventReq;
 use crate::models::game::FinalizeSessionReq;
+use crate::models::game::GameEventWsAck;
+use crate::models::game::GameEventWsError;
 use crate::models::user::MiddlewareData;
 use crate::models::validate::Validate;
 use crate::repositories::game_repository;
+use crate::services::scoring::{SCORING_VERSION, ScoreOutcome, score_game};
 
 #[utoipa::path(
     post,
@@ -74,7 +81,30 @@ pub async fn finalize_session(
     if session.user_id != ext_data.user_id {
         return HttpResponse::Forbidden().finish();
     }
-    match game_repository::finalize_session(&state.sb_client, session_id, body.score).await {
+
+    let (status, metric_value, metrics, scoring_version) = if !body.trials.is_empty() {
+        match score_game(&session.game_code, &body.trials) {
+            ScoreOutcome::Valid { metric, metrics } => {
+                ("completed", Some(metric), metrics, SCORING_VERSION)
+            }
+            ScoreOutcome::Invalid { reason } => {
+                ("invalid", None, json!({"reason": reason}), SCORING_VERSION)
+            }
+        }
+    } else {
+        ("completed", body.score, json!({}), 0)
+    };
+
+    match game_repository::finalize_session(
+        &state.sb_client,
+        session_id,
+        status,
+        metric_value,
+        metrics,
+        scoring_version,
+    )
+    .await
+    {
         Ok(_) => HttpResponse::Ok().finish(),
         Err(e) => e.to_response(),
     }
@@ -250,19 +280,162 @@ pub async fn create_game_event(
     if session.user_id != ext_data.user_id {
         return HttpResponse::Forbidden().finish();
     }
-    match game_repository::insert_event(
-        &state.sb_client,
-        session_id,
-        ext_data.user_id,
-        body.round,
-        body.event_value,
-        &body.client_ts,
-    )
-    .await
-    {
-        Ok(event_id) => HttpResponse::Created().json(json!({"id": event_id})),
+    match persist_game_event(&state, session_id, ext_data.user_id, &body).await {
+        Ok(event) => HttpResponse::Created().json(event),
         Err(e) => e.to_response(),
     }
+}
+
+#[utoipa::path(
+    get,
+    path = "/api/game/session/{id}/events/ws",
+    params(
+        ("id" = Uuid, Path, example = "3fa85f64-5717-4562-b3fc-2c963f66afa6"),
+    ),
+    responses(
+        (
+            status = 101,
+            description = "WebSocket upgrade accepted. After connecting, send text frames containing JSON shaped like CreateGameEventReq. Successful writes yield GameEventWsAck frames and invalid payloads yield GameEventWsError frames. Browser clients may authenticate with the token query parameter because the middleware already supports token=... for WebSocket handshakes."
+        ),
+        (status = 403, description = "Session belongs to another user"),
+        (status = 404, description = "Session not found", body = Object),
+        (status = 500, description = "Internal error", body = Object),
+    ),
+    tag = "games",
+    security(("Authorization" = []))
+)]
+pub async fn stream_game_events(
+    id: web::Path<Uuid>,
+    req: HttpRequest,
+    body: web::Payload,
+    ext_data: web::ReqData<MiddlewareData>,
+    state: web::Data<AppState>,
+) -> Result<HttpResponse> {
+    let session_id = id.into_inner();
+    let session = match game_repository::get_session(&state.sb_client, session_id).await {
+        Ok(v) => v,
+        Err(e) => return Ok(e.to_response()),
+    };
+
+    if session.user_id != ext_data.user_id {
+        return Ok(HttpResponse::Forbidden().finish());
+    }
+
+    let (response, mut ws_session, mut msg_stream) = actix_ws::handle(&req, body)?;
+    let user_id = ext_data.user_id;
+    let app_state = state.clone();
+
+    actix_web::rt::spawn(async move {
+        while let Some(item) = msg_stream.next().await {
+            let message = match item {
+                Ok(message) => message,
+                Err(error) => {
+                    log::error!("WebSocket stream error for game session {session_id}: {error}");
+                    let _ = ws_session.close(None).await;
+                    break;
+                }
+            };
+
+            let should_continue = handle_game_event_ws_message(
+                &mut ws_session,
+                message,
+                &app_state,
+                session_id,
+                user_id,
+            )
+            .await;
+
+            if !should_continue {
+                break;
+            }
+        }
+    });
+
+    Ok(response)
+}
+
+async fn handle_game_event_ws_message(
+    ws_session: &mut actix_ws::Session,
+    message: actix_ws::Message,
+    state: &web::Data<AppState>,
+    session_id: Uuid,
+    user_id: Uuid,
+) -> bool {
+    match message {
+        actix_ws::Message::Text(text) => {
+            handle_game_event_ws_text(ws_session, state, session_id, user_id, &text).await;
+            true
+        }
+        actix_ws::Message::Ping(bytes) => {
+            let _ = ws_session.pong(&bytes).await;
+            true
+        }
+        actix_ws::Message::Close(reason) => {
+            let _ = ws_session.clone().close(reason).await;
+            false
+        }
+        actix_ws::Message::Binary(_) | actix_ws::Message::Continuation(_) => {
+            send_game_event_ws_error(ws_session, "only text frames are supported").await;
+            true
+        }
+        actix_ws::Message::Pong(_) | actix_ws::Message::Nop => true,
+    }
+}
+
+async fn handle_game_event_ws_text(
+    ws_session: &mut actix_ws::Session,
+    state: &web::Data<AppState>,
+    session_id: Uuid,
+    user_id: Uuid,
+    text: &str,
+) {
+    let event = match parse_game_event_ws_payload(text) {
+        Ok(event) => event,
+        Err(error) => {
+            send_game_event_ws_error(ws_session, &error).await;
+            return;
+        }
+    };
+
+    match persist_game_event(state, session_id, user_id, &event).await {
+        Ok(stored_event) => send_game_event_ws_ack(ws_session, stored_event).await,
+        Err(error) => send_game_event_ws_error(ws_session, &error.to_string()).await,
+    }
+}
+
+fn parse_game_event_ws_payload(text: &str) -> std::result::Result<CreateGameEventReq, String> {
+    let event = serde_json::from_str::<CreateGameEventReq>(text)
+        .map_err(|_| String::from("invalid event payload"))?;
+
+    event
+        .validate()
+        .map_err(|errors| errors.join(", "))?;
+
+    Ok(event)
+}
+
+async fn send_game_event_ws_ack(
+    ws_session: &mut actix_ws::Session,
+    event: GameEventAck,
+) {
+    let payload = json!(GameEventWsAck {
+        message_type: String::from("event_stored"),
+        event,
+    })
+    .to_string();
+    let _ = ws_session.text(payload).await;
+}
+
+async fn send_game_event_ws_error(
+    ws_session: &mut actix_ws::Session,
+    error: &str,
+) {
+    let payload = json!(GameEventWsError {
+        message_type: String::from("error"),
+        error: String::from(error),
+    })
+    .to_string();
+    let _ = ws_session.text(payload).await;
 }
 
 #[utoipa::path(
@@ -297,4 +470,26 @@ pub async fn get_game_events(
         Ok(events) => HttpResponse::Ok().json(events),
         Err(e) => e.to_response(),
     }
+}
+
+async fn persist_game_event(
+    state: &web::Data<AppState>,
+    session_id: Uuid,
+    user_id: Uuid,
+    event: &CreateGameEventReq,
+) -> std::result::Result<GameEventAck, crate::errors::custom_errors::RepoError> {
+    let event_id = game_repository::insert_event(
+        &state.sb_client,
+        session_id,
+        user_id,
+        event.round,
+        event.event_value,
+        &event.client_ts,
+    )
+    .await?;
+
+    Ok(GameEventAck {
+        id: event_id,
+        round: event.round,
+    })
 }
