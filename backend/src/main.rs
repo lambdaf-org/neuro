@@ -1,40 +1,38 @@
 use std::env;
 
+use self::models::app_state::AppState;
+use self::routes::global_routes;
+use crate::handlers::asset_handler::__path_create_asset_group;
+use crate::handlers::asset_handler::__path_create_game_asset;
+use crate::handlers::asset_handler::__path_delete_asset_group;
+use crate::handlers::asset_handler::__path_delete_game_asset;
+use crate::handlers::asset_handler::__path_get_asset_groups_by_code;
+use crate::handlers::asset_handler::__path_list_asset_groups;
+use crate::handlers::asset_handler::__path_list_game_assets;
+use crate::handlers::asset_handler::__path_update_asset_group;
+use crate::handlers::asset_handler::__path_update_game_asset;
+use crate::handlers::game_handler::__path_create_game_event;
+use crate::handlers::game_handler::__path_finalize_session;
+use crate::handlers::game_handler::__path_get_game_events;
+use crate::handlers::game_handler::__path_get_game_leaderboard;
+use crate::handlers::game_handler::__path_get_game_metadata;
+use crate::handlers::game_handler::__path_get_game_session;
+use crate::handlers::game_handler::__path_get_player_stats;
+use crate::handlers::game_handler::__path_get_recent_sessions;
+use crate::handlers::game_handler::__path_start_game;
+use crate::handlers::game_handler::__path_stream_game_events;
+use crate::handlers::user_handler::__path_login;
+use crate::handlers::user_handler::__path_register;
+use crate::models::assets::AssetGroupRes;
+use crate::models::assets::GameAssetRes;
 use crate::models::assets::{
     CreateAssetGroupReq, CreateGameAssetReq, UpdateAssetGroupReq, UpdateGameAssetReq,
 };
+use crate::models::game::GameMetadata;
+use crate::models::game::PlayerStats;
+use crate::models::game::{CreateGameEventReq, GameEvent, GameEventAck, GameEventWsAck, GameEventWsError};
 use crate::models::game::{FinalizeSessionReq, GameSession, LeaderboardEntry};
 use crate::models::user::{LoginPayload, LoginRes, RegisterPayload};
-use utoipa::Modify;
-use utoipa::OpenApi;
-use utoipa::openapi::security::ApiKey;
-use utoipa::openapi::security::ApiKeyValue;
-use utoipa::openapi::security::SecurityScheme;
-use utoipa_swagger_ui::SwaggerUi;
-use crate::handlers::game_handler::__path_start_game;
-use crate::handlers::game_handler::__path_finalize_session;
-use crate::handlers::game_handler::__path_get_game_session;
-use crate::handlers::user_handler::__path_login;
-use crate::handlers::user_handler::__path_register;
-use crate::handlers::asset_handler::__path_list_game_assets;
-use crate::handlers::asset_handler::__path_create_game_asset;
-use crate::handlers::asset_handler::__path_delete_game_asset;
-use crate::handlers::asset_handler::__path_list_asset_groups;
-use crate::handlers::asset_handler::__path_update_game_asset;
-use crate::handlers::asset_handler::__path_delete_asset_group;
-use crate::handlers::asset_handler::__path_get_asset_groups_by_code;
-use crate::handlers::asset_handler::__path_create_asset_group;
-use crate::handlers::asset_handler::__path_update_asset_group;
-use crate::handlers::game_handler::__path_get_game_leaderboard;
-use crate::handlers::game_handler::__path_get_player_stats;
-use crate::handlers::game_handler::__path_get_recent_sessions;
-use crate::models::game::GameMetadata;
-use crate::handlers::game_handler::__path_get_game_metadata;
-use crate::handlers::game_handler::__path_create_game_event;
-use crate::handlers::game_handler::__path_get_game_events;
-use crate::models::game::{CreateGameEventReq, GameEvent};
-use self::models::app_state::AppState;
-use self::routes::global_routes;
 use actix_web::App;
 use actix_web::HttpServer;
 use actix_web::middleware::Logger;
@@ -45,9 +43,12 @@ use log::info;
 use log::warn;
 use supabase_auth::models::AuthClient;
 use supabase_rs::SupabaseClient;
-use crate::models::assets::GameAssetRes;
-use crate::models::assets::AssetGroupRes;
-use crate::models::game::PlayerStats;
+use utoipa::Modify;
+use utoipa::OpenApi;
+use utoipa::openapi::security::ApiKey;
+use utoipa::openapi::security::ApiKeyValue;
+use utoipa::openapi::security::SecurityScheme;
+use utoipa_swagger_ui::SwaggerUi;
 
 pub mod config;
 pub mod errors;
@@ -93,17 +94,18 @@ async fn main() -> std::io::Result<()> {
             get_game_metadata,
             create_game_event,
             get_game_events,
+            stream_game_events,
         ),
         components(schemas(
-            RegisterPayload, 
-            LoginPayload, 
+            RegisterPayload,
+            LoginPayload,
             LoginRes,
-            FinalizeSessionReq, 
-            GameSession, 
+            FinalizeSessionReq,
+            GameSession,
             LeaderboardEntry,
             CreateAssetGroupReq,
             UpdateAssetGroupReq,
-            CreateGameAssetReq, 
+            CreateGameAssetReq,
             UpdateGameAssetReq,
             GameAssetRes,
             AssetGroupRes,
@@ -111,6 +113,9 @@ async fn main() -> std::io::Result<()> {
             GameMetadata,
             CreateGameEventReq,
             GameEvent,
+            GameEventAck,
+            GameEventWsAck,
+            GameEventWsError,
         )),
         security(("Authorization" = [])),
         modifiers(&SecuritySchemas),
