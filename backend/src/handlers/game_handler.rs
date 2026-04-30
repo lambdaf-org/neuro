@@ -253,7 +253,7 @@ pub async fn get_game_metadata(
     ),
     request_body = CreateGameEventReq,
     responses(
-        (status = 201, description = "Event created", body = Object),
+        (status = 201, description = "Event created", body = GameEventAck),
         (status = 400, description = "Validation error", body = Object),
         (status = 403, description = "Session belongs to another user"),
         (status = 404, description = "Session not found", body = Object),
