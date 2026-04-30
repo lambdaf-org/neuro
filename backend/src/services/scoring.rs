@@ -69,9 +69,9 @@ impl Scorer for ReactionScorer {
         ScoreOutcome::Valid {
             metric,
             metrics: json!({
-                "n_trials": trials.len(),
-                "n_valid": valid_times.len(),
-                "n_dropped": trials.len() - valid_times.len(),
+                "n_trials": trials.len() as i64,
+                "n_valid": valid_times.len() as i64,
+                "n_dropped": (trials.len() - valid_times.len()) as i64,
             }),
         }
     }
@@ -97,9 +97,9 @@ impl Scorer for WorkingMemoryScorer {
         ScoreOutcome::Valid {
             metric: f64::from(max_span),
             metrics: json!({
-                "n_valid": valid_spans.len(),
-                "n_fail": invalid_count,
-                "retries": invalid_count,
+                "n_valid": valid_spans.len() as i64,
+                "n_fail": invalid_count as i64,
+                "retries": invalid_count as i64,
             }),
         }
     }
@@ -134,8 +134,8 @@ impl Scorer for ProcessingSpeedScorer {
         ScoreOutcome::Valid {
             metric: correct_count as f64,
             metrics: json!({
-                "n_trials": valid_trials.len(),
-                "n_incorrect": incorrect_count,
+                "n_trials": valid_trials.len() as i64,
+                "n_incorrect": incorrect_count as i64,
                 "mean_rt": mean_rt,
             }),
         }
@@ -161,8 +161,8 @@ impl Scorer for PatternLogicScorer {
         ScoreOutcome::Valid {
             metric: right_count as f64 / valid_answers.len() as f64,
             metrics: json!({
-                "n_trials": valid_answers.len(),
-                "misses": misses,
+                "n_trials": valid_answers.len() as i64,
+                "misses": misses as i64,
             }),
         }
     }
@@ -197,8 +197,8 @@ impl Scorer for MentalRotationScorer {
         ScoreOutcome::Valid {
             metric: right_count as f64 / valid_trials.len() as f64,
             metrics: json!({
-                "n_trials": valid_trials.len(),
-                "misses": misses,
+                "n_trials": valid_trials.len() as i64,
+                "misses": misses as i64,
                 "mean_magnitude": mean_magnitude,
             }),
         }
