@@ -51,7 +51,9 @@ interface ReactionTimeSummary {
 }
 
 function summarizeReactionTimes(times: number[]): ReactionTimeSummary {
-  const scoredTimes = times.filter((ms) => ms >= MIN_VALID_REACTION_MS && ms <= MAX_VALID_REACTION_MS)
+  const scoredTimes = times.filter(
+    (ms) => ms >= MIN_VALID_REACTION_MS && ms <= MAX_VALID_REACTION_MS,
+  )
   const averageMs =
     scoredTimes.length > 0
       ? Math.round(scoredTimes.reduce((a, b) => a + b, 0) / scoredTimes.length)
@@ -187,10 +189,8 @@ export function useReactionGame(options: UseReactionGameOptions) {
     const times = roundResults.value.map((r) => r.reactionMs)
     const summary = summarizeReactionTimes(times)
 
-    const score = summary.medianMs > 0 ? Number((100000 / summary.medianMs).toFixed(2)) : 0
-
     const result = createGameResult({
-      score,
+      score: summary.medianMs,
       durationMs: summary.totalMs,
       states: ['countdown', 'running', 'finished'],
       metrics: {
@@ -202,6 +202,7 @@ export function useReactionGame(options: UseReactionGameOptions) {
         n_excluded: summary.excludedCount,
         ...Object.fromEntries(times.map((t, i) => [`round_${i + 1}_ms`, t])),
       },
+      trials: times.map((ms) => ({ ms })),
     })
 
     await session.submitResult(result)
@@ -255,8 +256,8 @@ export function useReactionGame(options: UseReactionGameOptions) {
     () => (phase.value === 'idle' || phase.value === 'finished') && !isBusy.value,
   )
 
-  const medianMs = computed(() =>
-    summarizeReactionTimes(roundResults.value.map((r) => r.reactionMs)).medianMs,
+  const medianMs = computed(
+    () => summarizeReactionTimes(roundResults.value.map((r) => r.reactionMs)).medianMs,
   )
 
   return {

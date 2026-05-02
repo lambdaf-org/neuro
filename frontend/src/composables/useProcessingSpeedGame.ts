@@ -101,6 +101,10 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
         accuracy_pct: summary.accuracyPercent,
         average_response_ms: summary.averageResponseMs,
       },
+      trials: attempts.value.map((attempt) => ({
+        correct: attempt.wasCorrect,
+        ms: attempt.responseMs,
+      })),
     })
 
     await session.submitResult(result)
