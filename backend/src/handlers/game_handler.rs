@@ -178,13 +178,25 @@ async fn build_pattern_logic_trials(
     let groups = asset_repository::get_asset_groups_by_code(&state.sb_client, String::from("gf"))
         .await
         .map_err(|e| e.to_response())?;
+    let group_ids: Vec<_> = groups.iter().map(|group| group.id).collect();
+    let assets = asset_repository::get_game_assets_by_group_ids(&state.sb_client, &group_ids)
+        .await
+        .map_err(|e| e.to_response())?;
+    let mut assets_by_group = HashMap::new();
+
+    for asset in assets {
+        assets_by_group
+            .entry(asset.group_id)
+            .or_insert_with(Vec::new)
+            .push(asset);
+    }
+
     let mut scoring_trials = Vec::new();
 
     for group in groups.iter() {
-        let assets = asset_repository::get_game_assets(&state.sb_client, group.id)
-            .await
-            .map_err(|e| e.to_response())?;
-
+        let Some(assets) = assets_by_group.get(&group.id) else {
+            continue;
+        };
         let Some(options) = playable_fluid_options(&assets) else {
             continue;
         };
