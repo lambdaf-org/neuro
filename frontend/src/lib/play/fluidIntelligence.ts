@@ -4,7 +4,6 @@ export interface FluidOption {
   id: number
   label: string
   imageUrl: string
-  isCorrect: boolean
 }
 
 export interface FluidPuzzle {
@@ -21,8 +20,6 @@ export interface FluidPuzzle {
 export interface FluidAnswer {
   puzzleId: number
   selectedOptionId: number
-  correctOptionId: number
-  wasCorrect: boolean
   responseMs: number
 }
 
@@ -64,9 +61,8 @@ function isMatrixAsset(asset: GameAsset): boolean {
 function toPuzzle(group: AssetGroup, random: () => number): FluidPuzzle | null {
   const matrix = group.assets.find(isMatrixAsset)
   const options = group.assets.filter((asset) => !isMatrixAsset(asset))
-  const correctOptions = options.filter((asset) => asset.is_correct)
 
-  if (!matrix || options.length < 2 || correctOptions.length !== 1) {
+  if (!matrix || options.length !== 4) {
     return null
   }
 
@@ -83,7 +79,6 @@ function toPuzzle(group: AssetGroup, random: () => number): FluidPuzzle | null {
         id: asset.id,
         label: asset.label,
         imageUrl: asset.image_url,
-        isCorrect: asset.is_correct,
       })),
       random,
     ),
@@ -104,12 +99,9 @@ export function createFluidPuzzles(
   )
 }
 
+// Correctness is server-scored; before submission the client can only summarize progress.
 export function summarizeFluidAnswers(answers: readonly FluidAnswer[]): FluidSummary {
   const totalAnswers = answers.length
-  const correctAnswers = answers.filter((answer) => answer.wasCorrect).length
-  const incorrectAnswers = totalAnswers - correctAnswers
-  const accuracyPercent =
-    totalAnswers > 0 ? Math.round((correctAnswers / totalAnswers) * 100) : 0
   const averageResponseMs =
     totalAnswers > 0
       ? Math.round(answers.reduce((sum, answer) => sum + answer.responseMs, 0) / totalAnswers)
@@ -117,9 +109,9 @@ export function summarizeFluidAnswers(answers: readonly FluidAnswer[]): FluidSum
 
   return {
     totalAnswers,
-    correctAnswers,
-    incorrectAnswers,
-    accuracyPercent,
+    correctAnswers: 0,
+    incorrectAnswers: 0,
+    accuracyPercent: 0,
     averageResponseMs,
   }
 }

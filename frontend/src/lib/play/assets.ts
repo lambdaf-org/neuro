@@ -5,7 +5,6 @@ export interface GameAsset {
   group_id: number
   label: string
   image_url: string
-  is_correct: boolean
 }
 
 export interface AssetGroup {
@@ -28,8 +27,7 @@ function isGameAsset(value: unknown): value is GameAsset {
     typeof value.id === 'number' &&
     typeof value.group_id === 'number' &&
     typeof value.label === 'string' &&
-    typeof value.image_url === 'string' &&
-    typeof value.is_correct === 'boolean'
+    typeof value.image_url === 'string'
   )
 }
 

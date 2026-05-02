@@ -16,13 +16,13 @@ const {
   currentIndex,
   totalPuzzles,
   answers,
+  hasSubmittedResult,
   score,
   correctAnswers,
   incorrectAnswers,
   averageResponseMs,
   isBusy,
   canStart,
-  isSubmitting,
   errorMessage,
   startGame,
   resetGame,
@@ -118,7 +118,9 @@ watch(phase, async (nextPhase) => {
         </div>
         <p class="play-surface__title">{{ displayName }}</p>
         <p class="play-surface__text">{{ taskSummary }}</p>
-        <p class="play-surface__text">Choose one completion for each pattern. Final score is accuracy.</p>
+        <p class="play-surface__text">
+          Choose one completion for each pattern. Final score is accuracy.
+        </p>
         <p v-if="benchmarkLabel" class="play-surface__meta">Benchmark: {{ benchmarkLabel }}</p>
         <UButton
           color="secondary"
@@ -150,7 +152,7 @@ watch(phase, async (nextPhase) => {
       >
         <div class="flex w-full items-center justify-between gap-3">
           <UBadge color="secondary" variant="soft" size="lg">{{ progressLabel }}</UBadge>
-          <UBadge color="neutral" variant="soft" size="lg">Score {{ score }}%</UBadge>
+          <UBadge color="neutral" variant="soft" size="lg">Answered {{ answers.length }}</UBadge>
         </div>
 
         <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -192,22 +194,23 @@ watch(phase, async (nextPhase) => {
           </button>
         </div>
 
-        <p class="max-w-md text-sm leading-6 text-toned">
-          Press 1-4 or tap an option.
-        </p>
+        <p class="max-w-md text-sm leading-6 text-toned">Press 1-4 or tap an option.</p>
+      </div>
+
+      <div v-else-if="phase === 'submitting'" class="play-surface__content">
+        <UIcon name="i-lucide-loader-2" class="h-10 w-10 animate-spin text-secondary" />
+        <p class="play-surface__eyebrow">Saving result</p>
       </div>
 
       <div
-        v-else-if="phase === 'finished'"
+        v-else-if="phase === 'finished' && hasSubmittedResult"
         class="play-surface__content play-surface__content--wide max-w-md"
       >
         <UBadge color="secondary" variant="soft" size="lg">Final accuracy {{ score }}%</UBadge>
 
         <div class="space-y-2">
           <p class="play-surface__eyebrow">Pattern logic score</p>
-          <p class="play-surface__display">
-            {{ score }}<span class="text-2xl text-toned">%</span>
-          </p>
+          <p class="play-surface__display">{{ score }}<span class="text-2xl text-toned">%</span></p>
         </div>
 
         <div class="grid w-full grid-cols-2 gap-3">
@@ -229,14 +232,24 @@ watch(phase, async (nextPhase) => {
         </div>
 
         <div class="flex items-center gap-3">
-          <span v-if="isSubmitting" class="flex items-center gap-1.5 text-xs text-dimmed">
-            <UIcon name="i-lucide-loader-2" class="h-3.5 w-3.5 animate-spin" />
-            Saving...
-          </span>
           <UButton color="secondary" :disabled="isBusy" :loading="isBusy" @click.stop="startGame">
             Play again
           </UButton>
         </div>
+      </div>
+
+      <div
+        v-else-if="phase === 'finished'"
+        class="play-surface__content play-surface__content--wide max-w-md"
+      >
+        <UIcon name="i-lucide-alert-triangle" class="h-10 w-10 text-error" />
+        <div class="space-y-2">
+          <p class="play-surface__eyebrow">Result unavailable</p>
+          <p class="play-surface__text">Your answers were not scored.</p>
+        </div>
+        <UButton color="secondary" :disabled="isBusy" :loading="isBusy" @click.stop="startGame">
+          Play again
+        </UButton>
       </div>
     </div>
   </div>

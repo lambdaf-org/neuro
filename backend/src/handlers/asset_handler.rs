@@ -3,6 +3,8 @@ use actix_web::web;
 use serde_json::json;
 
 use crate::models::app_state::AppState;
+use crate::models::assets::PublicAssetGroupRes;
+use crate::models::assets::is_playable_fluid_group;
 use crate::models::assets::{
     CreateAssetGroupReq, CreateGameAssetReq, UpdateAssetGroupReq, UpdateGameAssetReq,
 };
@@ -70,7 +72,7 @@ pub async fn list_asset_groups(state: web::Data<AppState>) -> HttpResponse {
         ("code" = String, Path, description = "Game code"),
     ),
     responses(
-        (status = 200, description = "Asset groups for game code", body = Vec<AssetGroupRes>),
+        (status = 200, description = "Asset groups for game code", body = Vec<PublicAssetGroupRes>),
         (status = 500, description = "Internal error", body = Object),
     ),
     tag = "assets", 
@@ -81,9 +83,9 @@ pub async fn get_asset_groups_by_code(
     state: web::Data<AppState>,
 ) -> HttpResponse {
     // TODO: Refine with a join to one shot this (inefficient because O(N + 1))
-    // TODO: Do not expose the true answer on game asset fetch since players may cheat
+    let game_code = code.into_inner();
     let mut asset_group =
-        match asset_repository::get_asset_groups_by_code(&state.sb_client, code.into_inner()).await
+        match asset_repository::get_asset_groups_by_code(&state.sb_client, game_code.clone()).await
         {
             Ok(v) => v,
             Err(e) => return e.to_response(),
@@ -96,7 +98,13 @@ pub async fn get_asset_groups_by_code(
         }
     }
 
-    HttpResponse::Ok().json(asset_group)
+    let public_groups: Vec<PublicAssetGroupRes> = asset_group
+        .iter()
+        .filter(|group| game_code != "gf" || is_playable_fluid_group(group))
+        .map(PublicAssetGroupRes::from)
+        .collect();
+
+    HttpResponse::Ok().json(public_groups)
 }
 
 #[utoipa::path(

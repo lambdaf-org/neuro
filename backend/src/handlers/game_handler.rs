@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use actix_web::HttpRequest;
 use actix_web::HttpResponse;
 use actix_web::Result;
@@ -7,13 +9,17 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::models::app_state::AppState;
-use crate::models::game::GameEventAck;
+use crate::models::assets::playable_fluid_options;
 use crate::models::game::CreateGameEventReq;
 use crate::models::game::FinalizeSessionReq;
+use crate::models::game::FinalizeSessionResultRes;
+use crate::models::game::GameEventAck;
 use crate::models::game::GameEventWsAck;
 use crate::models::game::GameEventWsError;
+use crate::models::game::TrialPayload;
 use crate::models::user::MiddlewareData;
 use crate::models::validate::Validate;
+use crate::repositories::asset_repository;
 use crate::repositories::game_repository;
 use crate::services::scoring::{SCORING_VERSION, ScoreOutcome, score_game};
 
@@ -53,7 +59,7 @@ pub async fn start_game(
     ),
     request_body = FinalizeSessionReq,
     responses(
-        (status = 200, description = "Session finalized"),
+        (status = 200, description = "Session finalized", body = FinalizeSessionResultRes),
         (status = 400, description = "Validation error", body = Object),
         (status = 403, description = "Session belongs to another user"),
         (status = 404, description = "Session not found", body = Object),
@@ -81,9 +87,26 @@ pub async fn finalize_session(
     if session.user_id != ext_data.user_id {
         return HttpResponse::Forbidden().finish();
     }
+    if session.status != "in_progress" {
+        return HttpResponse::Conflict().json(json!({"error": "session already finalized"}));
+    }
 
-    let (status, metric_value, metrics, scoring_version) = if !body.trials.is_empty() {
-        match score_game(&session.game_code, &body.trials) {
+    if session.game_code == "gf" && body.trials.is_empty() {
+        return HttpResponse::BadRequest()
+            .json(json!({"error": "Pattern Logic requires selected option trials"}));
+    }
+
+    let scoring_trials = if session.game_code == "gf" {
+        match build_pattern_logic_trials(&state, &body.trials).await {
+            Ok(trials) => trials,
+            Err(response) => return response,
+        }
+    } else {
+        body.trials.clone()
+    };
+
+    let (status, metric_value, metrics, scoring_version) = if !scoring_trials.is_empty() {
+        match score_game(&session.game_code, &scoring_trials) {
             ScoreOutcome::Valid { metric, metrics } => {
                 ("completed", Some(metric), metrics, SCORING_VERSION)
             }
@@ -93,6 +116,13 @@ pub async fn finalize_session(
         }
     } else {
         ("completed", body.score, json!({}), 0)
+    };
+
+    let result = FinalizeSessionResultRes {
+        status: status.to_string(),
+        metric_value,
+        metrics: metrics.clone(),
+        scoring_version,
     };
 
     match game_repository::finalize_session(
@@ -105,9 +135,97 @@ pub async fn finalize_session(
     )
     .await
     {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(_) => HttpResponse::Ok().json(result),
         Err(e) => e.to_response(),
     }
+}
+
+async fn build_pattern_logic_trials(
+    state: &web::Data<AppState>,
+    trials: &[TrialPayload],
+) -> std::result::Result<Vec<TrialPayload>, HttpResponse> {
+    let mut answers_by_puzzle = HashMap::new();
+
+    for trial in trials.iter() {
+        let Some(puzzle_id) = trial.puzzle_id else {
+            return Err(HttpResponse::BadRequest().json(json!({"error": "puzzle_id is required"})));
+        };
+        let Some(selected_option_id) = trial.selected_option_id else {
+            return Err(
+                HttpResponse::BadRequest().json(json!({"error": "selected_option_id is required"}))
+            );
+        };
+
+        if puzzle_id < 1 {
+            return Err(HttpResponse::BadRequest().json(json!({"error": "puzzle_id must be >= 1"})));
+        }
+        if selected_option_id < 1 {
+            return Err(HttpResponse::BadRequest()
+                .json(json!({"error": "selected_option_id must be >= 1"})));
+        }
+        if trial.ms.is_some_and(|ms| !ms.is_finite() || ms < 0.0) {
+            return Err(HttpResponse::BadRequest()
+                .json(json!({"error": "ms must be a non-negative finite number"})));
+        }
+
+        if answers_by_puzzle.insert(puzzle_id, trial).is_some() {
+            return Err(
+                HttpResponse::BadRequest().json(json!({"error": "duplicate puzzle answer"}))
+            );
+        }
+    }
+
+    let groups = asset_repository::get_asset_groups_by_code(&state.sb_client, String::from("gf"))
+        .await
+        .map_err(|e| e.to_response())?;
+    let mut scoring_trials = Vec::new();
+
+    for group in groups.iter() {
+        let assets = asset_repository::get_game_assets(&state.sb_client, group.id)
+            .await
+            .map_err(|e| e.to_response())?;
+
+        let Some(options) = playable_fluid_options(&assets) else {
+            continue;
+        };
+        let correct_option = options
+            .iter()
+            .find(|asset| asset.is_correct)
+            .expect("playable fluid options include exactly one correct option");
+
+        let Some(answer) = answers_by_puzzle.get(&group.id) else {
+            return Err(HttpResponse::BadRequest().json(json!({"error": "missing puzzle answer"})));
+        };
+        let selected_option_id = answer
+            .selected_option_id
+            .expect("selected_option_id was validated before insertion");
+
+        if !options.iter().any(|asset| asset.id == selected_option_id) {
+            return Err(
+                HttpResponse::BadRequest().json(json!({"error": "selected option is invalid"}))
+            );
+        }
+
+        scoring_trials.push(TrialPayload {
+            ms: answer.ms,
+            span: None,
+            correct: Some(selected_option_id == correct_option.id),
+            magnitude: None,
+            puzzle_id: answer.puzzle_id,
+            selected_option_id: answer.selected_option_id,
+        });
+    }
+
+    if scoring_trials.is_empty() {
+        return Err(
+            HttpResponse::BadRequest().json(json!({"error": "no playable Pattern Logic assets"}))
+        );
+    }
+    if answers_by_puzzle.len() != scoring_trials.len() {
+        return Err(HttpResponse::BadRequest().json(json!({"error": "answer count mismatch"})));
+    }
+
+    Ok(scoring_trials)
 }
 
 #[utoipa::path(
@@ -407,17 +525,12 @@ fn parse_game_event_ws_payload(text: &str) -> std::result::Result<CreateGameEven
     let event = serde_json::from_str::<CreateGameEventReq>(text)
         .map_err(|_| String::from("invalid event payload"))?;
 
-    event
-        .validate()
-        .map_err(|errors| errors.join(", "))?;
+    event.validate().map_err(|errors| errors.join(", "))?;
 
     Ok(event)
 }
 
-async fn send_game_event_ws_ack(
-    ws_session: &mut actix_ws::Session,
-    event: GameEventAck,
-) {
+async fn send_game_event_ws_ack(ws_session: &mut actix_ws::Session, event: GameEventAck) {
     let payload = json!(GameEventWsAck {
         message_type: String::from("event_stored"),
         event,
@@ -426,10 +539,7 @@ async fn send_game_event_ws_ack(
     let _ = ws_session.text(payload).await;
 }
 
-async fn send_game_event_ws_error(
-    ws_session: &mut actix_ws::Session,
-    error: &str,
-) {
+async fn send_game_event_ws_error(ws_session: &mut actix_ws::Session, error: &str) {
     let payload = json!(GameEventWsError {
         message_type: String::from("error"),
         error: String::from(error),
