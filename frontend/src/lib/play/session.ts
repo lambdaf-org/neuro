@@ -1,4 +1,4 @@
-import { ApiError, parseEmptyBody, parseJsonBody, request } from '@/lib/auth/http'
+import { ApiError, parseJsonBody, request } from '@/lib/auth/http'
 import type { GameResult } from '@/lib/play/result'
 
 interface StartSessionResponse {
@@ -67,7 +67,7 @@ function parseFinalizeSessionResultBody(rawBody: string): FinalizeSessionResult 
     !isRecord(parsed.metrics) ||
     typeof parsed.scoring_version !== 'number'
   ) {
-    throw new ApiError('Unexpected Pattern Logic result response from server.', 500)
+    throw new ApiError('Unexpected game session finalize response from server.', 500)
   }
 
   return {
@@ -104,14 +104,22 @@ export async function submitGameResult(
   sessionId: string,
   result: GameResult,
   accessToken: string,
-): Promise<void> {
-  await request<void>(
+): Promise<FinalizeSessionResult> {
+  return request<FinalizeSessionResult>(
     `/api/game/session/${encodeURIComponent(sessionId)}`,
     withAuthorization(accessToken, {
       method: 'PATCH',
-      body: JSON.stringify({ score: result.score }),
+      body: JSON.stringify(
+        result.trials?.length
+          ? {
+              trials: result.trials,
+            }
+          : {
+              score: result.score,
+            },
+      ),
     }),
-    parseEmptyBody,
+    parseFinalizeSessionResultBody,
   )
 }
 

@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 import ProtectedNav from '@/components/ProtectedNav.vue'
 import { useProfileHistory } from '@/composables/useProfileHistory'
+import type { GameId } from '@/lib/play/modules'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -19,6 +20,11 @@ const scoreFormatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
 })
 
+const percentFormatter = new Intl.NumberFormat(undefined, {
+  maximumFractionDigits: 0,
+  style: 'percent',
+})
+
 function formatCompletedAt(value: string): string {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -28,8 +34,32 @@ function formatCompletedAt(value: string): string {
   return dateFormatter.format(date)
 }
 
-function formatScore(value: number): string {
+function formatMetric(value: number, gameId: GameId): string {
+  if (gameId === 'reaction-time') {
+    return `${scoreFormatter.format(value)} ms`
+  }
+
+  if (gameId === 'fluid-intelligence') {
+    return percentFormatter.format(value)
+  }
+
   return scoreFormatter.format(value)
+}
+
+function metricLabel(gameId: GameId): string {
+  if (gameId === 'reaction-time') {
+    return 'Median RT'
+  }
+
+  if (gameId === 'fluid-intelligence') {
+    return 'Accuracy'
+  }
+
+  if (gameId === 'processing-speed') {
+    return 'Correct'
+  }
+
+  return 'Metric'
 }
 </script>
 
@@ -175,9 +205,9 @@ function formatScore(value: number): string {
 
                   <div class="shrink-0 text-right">
                     <p class="text-sm font-semibold text-highlighted">
-                      {{ formatScore(gameSession.score) }}
+                      {{ formatMetric(gameSession.metric_value, history.module.id) }}
                     </p>
-                    <p class="text-xs text-muted">Score</p>
+                    <p class="text-xs text-muted">{{ metricLabel(history.module.id) }}</p>
                   </div>
                 </li>
               </ol>

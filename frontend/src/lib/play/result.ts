@@ -8,6 +8,16 @@ export interface GameResult {
   duration_ms: number
   states: GameState[]
   metrics: Record<string, number>
+  trials?: GameTrial[]
+}
+
+export interface GameTrial {
+  ms?: number
+  span?: number
+  correct?: boolean
+  magnitude?: number
+  puzzle_id?: number
+  selected_option_id?: number
 }
 
 export interface CreateGameResultInput {
@@ -15,6 +25,7 @@ export interface CreateGameResultInput {
   durationMs: number
   states: GameState[]
   metrics?: Record<string, number>
+  trials?: GameTrial[]
 }
 
 function toPositiveNumber(value: number): number {
@@ -34,5 +45,6 @@ export function createGameResult(input: CreateGameResultInput): GameResult {
     duration_ms: safeDuration,
     states: input.states,
     metrics: input.metrics ?? {},
+    trials: input.trials,
   }
 }
