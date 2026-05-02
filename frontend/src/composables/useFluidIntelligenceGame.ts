@@ -2,18 +2,25 @@ import { computed, onScopeDispose, ref, toValue, type MaybeRefOrGetter } from 'v
 
 import { useGameSession } from '@/composables/useGameSession'
 import { ApiError } from '@/lib/auth'
-import { createGameResult } from '@/lib/play/result'
 import { getAssetGroupsByCode } from '@/lib/play/assets'
 import {
   createFluidPuzzles,
   summarizeFluidAnswers,
   type FluidAnswer,
+  type FluidSummary,
   type FluidPuzzle,
 } from '@/lib/play/fluidIntelligence'
+import { submitFluidIntelligenceAnswers } from '@/lib/play/session'
 import { getErrorMessage } from '@/lib/utils/errorHandling'
 import { useAuthStore } from '@/stores/auth'
 
-export type FluidIntelligencePhase = 'idle' | 'loading' | 'countdown' | 'running' | 'finished'
+export type FluidIntelligencePhase =
+  | 'idle'
+  | 'loading'
+  | 'countdown'
+  | 'running'
+  | 'submitting'
+  | 'finished'
 
 const COUNTDOWN_SECONDS = 3
 
@@ -30,11 +37,12 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
   const puzzles = ref<FluidPuzzle[]>([])
   const currentIndex = ref(0)
   const answers = ref<FluidAnswer[]>([])
+  const submittedSummary = ref<FluidSummary | null>(null)
   const localErrorMessage = ref('')
   const isLoadingAssets = ref(false)
+  const isSubmittingAnswers = ref(false)
 
   let countdownInterval: ReturnType<typeof setInterval> | null = null
-  let gameStartedAt: number | null = null
   let puzzleStartedAt: number | null = null
   let lifecycleVersion = 0
 
@@ -57,9 +65,10 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
     puzzles.value = []
     currentIndex.value = 0
     answers.value = []
+    submittedSummary.value = null
     localErrorMessage.value = ''
     isLoadingAssets.value = false
-    gameStartedAt = null
+    isSubmittingAnswers.value = false
     puzzleStartedAt = null
   }
 
@@ -82,40 +91,46 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
   function startRunning(): void {
     phase.value = 'running'
     currentIndex.value = 0
-    gameStartedAt = performance.now()
-    puzzleStartedAt = gameStartedAt
+    puzzleStartedAt = performance.now()
   }
 
   async function finishGame(): Promise<void> {
     clearCountdownInterval()
-    phase.value = 'finished'
+    phase.value = 'submitting'
 
-    const summary = summarizeFluidAnswers(answers.value)
-    const durationMs =
-      gameStartedAt !== null ? Math.max(1, Math.round(performance.now() - gameStartedAt)) : 1
+    const sid = session.sessionId.value
+    if (!sid) {
+      localErrorMessage.value = 'No active game session to submit.'
+      phase.value = 'finished'
+      return
+    }
 
-    const perPuzzleMetrics = Object.fromEntries(
-      answers.value.flatMap((answer, index) => [
-        [`item_${index + 1}_correct`, answer.wasCorrect ? 1 : 0],
-        [`item_${index + 1}_response_ms`, answer.responseMs],
-      ]),
-    )
+    isSubmittingAnswers.value = true
+    try {
+      const result = await submitFluidIntelligenceAnswers(
+        sid,
+        answers.value.map((answer) => ({
+          puzzle_id: answer.puzzleId,
+          selected_option_id: answer.selectedOptionId,
+          response_ms: answer.responseMs,
+        })),
+        getAccessTokenOrThrow(),
+      )
 
-    const result = createGameResult({
-      score: summary.accuracyPercent,
-      durationMs,
-      states: ['countdown', 'running', 'finished'],
-      metrics: {
-        total_items: summary.totalAnswers,
-        correct_answers: summary.correctAnswers,
-        incorrect_answers: summary.incorrectAnswers,
-        accuracy_pct: summary.accuracyPercent,
-        average_response_ms: summary.averageResponseMs,
-        ...perPuzzleMetrics,
-      },
-    })
-
-    await session.submitResult(result)
+      submittedSummary.value = {
+        totalAnswers: result.total_answers,
+        correctAnswers: result.correct_answers,
+        incorrectAnswers: result.incorrect_answers,
+        accuracyPercent: result.score,
+        averageResponseMs: result.average_response_ms,
+      }
+      localErrorMessage.value = ''
+    } catch (error) {
+      localErrorMessage.value = getErrorMessage(error, 'Could not submit Pattern Logic result.')
+    } finally {
+      isSubmittingAnswers.value = false
+      phase.value = 'finished'
+    }
   }
 
   function selectOption(optionId: number): void {
@@ -129,8 +144,7 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
     }
 
     const selectedOption = puzzle.options.find((option) => option.id === optionId)
-    const correctOption = puzzle.options.find((option) => option.isCorrect)
-    if (!selectedOption || !correctOption) {
+    if (!selectedOption) {
       return
     }
 
@@ -140,8 +154,6 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
     answers.value.push({
       puzzleId: puzzle.id,
       selectedOptionId: selectedOption.id,
-      correctOptionId: correctOption.id,
-      wasCorrect: selectedOption.id === correctOption.id,
       responseMs,
     })
 
@@ -219,8 +231,11 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
   })
 
   const currentPuzzle = computed(() => puzzles.value[currentIndex.value] ?? null)
-  const summary = computed(() => summarizeFluidAnswers(answers.value))
-  const isBusy = computed(() => session.isBusy.value || isLoadingAssets.value)
+  const summary = computed(() => submittedSummary.value ?? summarizeFluidAnswers(answers.value))
+  const hasSubmittedResult = computed(() => submittedSummary.value !== null)
+  const isBusy = computed(
+    () => session.isBusy.value || isLoadingAssets.value || isSubmittingAnswers.value,
+  )
   const canStart = computed(
     () => (phase.value === 'idle' || phase.value === 'finished') && !isBusy.value,
   )
@@ -233,13 +248,13 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
     currentIndex,
     totalPuzzles: computed(() => puzzles.value.length),
     answers,
+    hasSubmittedResult,
     score: computed(() => summary.value.accuracyPercent),
     correctAnswers: computed(() => summary.value.correctAnswers),
     incorrectAnswers: computed(() => summary.value.incorrectAnswers),
     averageResponseMs: computed(() => summary.value.averageResponseMs),
     isBusy,
     canStart,
-    isSubmitting: session.isSubmitting,
     errorMessage,
     startGame,
     resetGame,

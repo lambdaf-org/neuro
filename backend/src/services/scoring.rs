@@ -91,7 +91,11 @@ impl Scorer for WorkingMemoryScorer {
             };
         }
 
-        let max_span = valid_spans.iter().copied().max().unwrap_or(MIN_WORKING_MEMORY_SPAN);
+        let max_span = valid_spans
+            .iter()
+            .copied()
+            .max()
+            .unwrap_or(MIN_WORKING_MEMORY_SPAN);
         let invalid_count = trials.len().saturating_sub(valid_spans.len());
 
         ScoreOutcome::Valid {
@@ -144,25 +148,36 @@ impl Scorer for ProcessingSpeedScorer {
 
 impl Scorer for PatternLogicScorer {
     fn score(&self, trials: &[TrialPayload]) -> ScoreOutcome {
-        let valid_answers = trials
+        let valid_trials = trials
             .iter()
-            .filter_map(|trial| trial.correct)
+            .filter_map(|trial| trial.correct.map(|correct| (correct, trial.ms)))
             .collect::<Vec<_>>();
 
-        if valid_answers.len() < MIN_ACCURACY_TRIALS {
+        if valid_trials.len() < MIN_ACCURACY_TRIALS {
             return ScoreOutcome::Invalid {
                 reason: "not enough valid trials",
             };
         }
 
-        let right_count = valid_answers.iter().filter(|correct| **correct).count();
-        let misses = valid_answers.len().saturating_sub(right_count);
+        let right_count = valid_trials.iter().filter(|(correct, _)| *correct).count();
+        let misses = valid_trials.len().saturating_sub(right_count);
+        let response_times = valid_trials
+            .iter()
+            .filter_map(|(_, ms)| *ms)
+            .filter(|ms| ms.is_finite() && *ms >= 0.0)
+            .collect::<Vec<_>>();
+        let mean_rt = if response_times.is_empty() {
+            0.0
+        } else {
+            response_times.iter().sum::<f64>() / response_times.len() as f64
+        };
 
         ScoreOutcome::Valid {
-            metric: right_count as f64 / valid_answers.len() as f64,
+            metric: right_count as f64 / valid_trials.len() as f64,
             metrics: json!({
-                "n_trials": valid_answers.len() as i64,
+                "n_trials": valid_trials.len() as i64,
                 "misses": misses as i64,
+                "mean_rt": mean_rt,
             }),
         }
     }

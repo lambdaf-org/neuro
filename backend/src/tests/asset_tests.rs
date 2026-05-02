@@ -2,6 +2,16 @@
 use crate::models::assets::*;
 use serde_json::json;
 
+fn fluid_asset(id: i32, label: &str, is_correct: bool) -> GameAssetRes {
+    GameAssetRes {
+        id,
+        group_id: 1,
+        label: label.to_string(),
+        image_url: format!("https://example.com/{label}.svg"),
+        is_correct,
+    }
+}
+
 // Verify that a valid asset group JSON maps correctly to AssetGroupRes
 // and that the assets vec defaults to empty via skip_deserializing
 #[test]
@@ -125,4 +135,31 @@ fn deserialize_update_game_asset_invalid_url() {
     });
     let req: UpdateGameAssetReq = serde_json::from_value(data).unwrap();
     assert_eq!(req.image_url, "invalid url with spaces");
+}
+
+#[test]
+fn playable_fluid_options_requires_matrix_four_options_and_one_correct() {
+    let assets = vec![
+        fluid_asset(1, "matrix", false),
+        fluid_asset(2, "option_0", true),
+        fluid_asset(3, "option_1", false),
+        fluid_asset(4, "option_2", false),
+        fluid_asset(5, "option_3", false),
+    ];
+
+    let options = playable_fluid_options(&assets).unwrap();
+
+    assert_eq!(options.len(), 4);
+    assert_eq!(options.iter().filter(|asset| asset.is_correct).count(), 1);
+}
+
+#[test]
+fn playable_fluid_options_rejects_partial_groups() {
+    let assets = vec![
+        fluid_asset(1, "matrix", false),
+        fluid_asset(2, "option_0", true),
+        fluid_asset(3, "option_1", false),
+    ];
+
+    assert!(playable_fluid_options(&assets).is_none());
 }

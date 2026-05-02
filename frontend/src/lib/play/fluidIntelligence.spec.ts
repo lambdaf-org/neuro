@@ -15,21 +15,30 @@ const groups: AssetGroup[] = [
         group_id: 1,
         label: 'matrix',
         image_url: 'https://example.test/matrix.svg',
-        is_correct: false,
       },
       {
         id: 11,
         group_id: 1,
         label: 'option_0',
         image_url: 'https://example.test/option_0.svg',
-        is_correct: true,
       },
       {
         id: 12,
         group_id: 1,
         label: 'option_1',
         image_url: 'https://example.test/option_1.svg',
-        is_correct: false,
+      },
+      {
+        id: 13,
+        group_id: 1,
+        label: 'option_2',
+        image_url: 'https://example.test/option_2.svg',
+      },
+      {
+        id: 14,
+        group_id: 1,
+        label: 'option_3',
+        image_url: 'https://example.test/option_3.svg',
       },
     ],
   },
@@ -41,15 +50,14 @@ describe('createFluidPuzzles', () => {
 
     expect(puzzles).toHaveLength(1)
     expect(puzzles[0]?.matrix.imageUrl).toContain('matrix.svg')
-    expect(puzzles[0]?.options).toHaveLength(2)
-    expect(puzzles[0]?.options.filter((option) => option.isCorrect)).toHaveLength(1)
+    expect(puzzles[0]?.options).toHaveLength(4)
   })
 
-  it('skips malformed groups without a single correct option', () => {
+  it('skips malformed groups without four answer options', () => {
     const malformedGroups = [
       {
         ...groups[0]!,
-        assets: groups[0]!.assets.map((asset) => ({ ...asset, is_correct: false })),
+        assets: groups[0]!.assets.slice(0, 3),
       },
     ]
 
@@ -58,29 +66,25 @@ describe('createFluidPuzzles', () => {
 })
 
 describe('summarizeFluidAnswers', () => {
-  it('summarizes accuracy and response time', () => {
+  it('summarizes progress and response time before server scoring', () => {
     expect(
       summarizeFluidAnswers([
         {
           puzzleId: 1,
           selectedOptionId: 11,
-          correctOptionId: 11,
-          wasCorrect: true,
           responseMs: 1000,
         },
         {
           puzzleId: 2,
           selectedOptionId: 21,
-          correctOptionId: 22,
-          wasCorrect: false,
           responseMs: 3000,
         },
       ]),
     ).toEqual({
       totalAnswers: 2,
-      correctAnswers: 1,
-      incorrectAnswers: 1,
-      accuracyPercent: 50,
+      correctAnswers: 0,
+      incorrectAnswers: 0,
+      accuracyPercent: 0,
       averageResponseMs: 2000,
     })
   })

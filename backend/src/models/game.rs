@@ -18,6 +18,16 @@ pub struct TrialPayload {
     pub span: Option<i32>,
     pub correct: Option<bool>,
     pub magnitude: Option<f64>,
+    pub puzzle_id: Option<i32>,
+    pub selected_option_id: Option<i32>,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct FinalizeSessionResultRes {
+    pub status: String,
+    pub metric_value: Option<f64>,
+    pub metrics: Value,
+    pub scoring_version: i32,
 }
 
 impl Validate for FinalizeSessionReq {
