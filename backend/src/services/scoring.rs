@@ -10,7 +10,6 @@ const MAX_VALID_REACTION_MS: f64 = 1500.0;
 const MIN_REACTION_TRIALS: usize = 3;
 const MIN_WORKING_MEMORY_SPAN: i32 = 1;
 const MAX_WORKING_MEMORY_SPAN: i32 = 99;
-const MIN_WORKING_MEMORY_TRIALS: usize = 3;
 const MIN_ACCURACY_TRIALS: usize = 5;
 
 pub enum ScoreOutcome {
@@ -79,31 +78,44 @@ impl Scorer for ReactionScorer {
 
 impl Scorer for WorkingMemoryScorer {
     fn score(&self, trials: &[TrialPayload]) -> ScoreOutcome {
-        let valid_spans = trials
+        let valid_trials = trials
             .iter()
-            .filter_map(|trial| trial.span)
-            .filter(|span| (*span >= MIN_WORKING_MEMORY_SPAN) && (*span <= MAX_WORKING_MEMORY_SPAN))
+            .filter_map(|trial| trial.span.map(|span| (span, trial.correct)))
+            .filter(|(span, _)| {
+                (*span >= MIN_WORKING_MEMORY_SPAN) && (*span <= MAX_WORKING_MEMORY_SPAN)
+            })
             .collect::<Vec<_>>();
 
-        if valid_spans.len() < MIN_WORKING_MEMORY_TRIALS {
+        if valid_trials.is_empty() {
             return ScoreOutcome::Invalid {
                 reason: "not enough valid trials",
             };
         }
 
-        let max_span = valid_spans
+        let correct_spans = valid_trials
             .iter()
-            .copied()
-            .max()
-            .unwrap_or(MIN_WORKING_MEMORY_SPAN);
-        let invalid_count = trials.len().saturating_sub(valid_spans.len());
+            .filter_map(|(span, correct)| {
+                if correct.unwrap_or(true) {
+                    Some(*span)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>();
+        let max_span = correct_spans.iter().copied().max().unwrap_or(0);
+        let invalid_count = trials.len().saturating_sub(valid_trials.len());
+        let failed_count = valid_trials
+            .iter()
+            .filter(|(_, correct)| correct.is_some_and(|value| !value))
+            .count()
+            + invalid_count;
 
         ScoreOutcome::Valid {
             metric: f64::from(max_span),
             metrics: json!({
-                "n_valid": valid_spans.len() as i64,
-                "n_fail": invalid_count as i64,
-                "retries": invalid_count as i64,
+                "n_valid": correct_spans.len() as i64,
+                "n_fail": failed_count as i64,
+                "retries": failed_count as i64,
             }),
         }
     }
