@@ -27,6 +27,7 @@ const {
   errorMessage,
   startGame,
   resetGame,
+  finishGame,
   selectTile,
 } = useWorkingMemoryGame({
   gameCode: computed(() => props.gameCode),
@@ -49,6 +50,22 @@ const feedbackTitle = computed(() => {
 
   return 'Sequence ended'
 })
+const firstMismatchIndex = computed(() => {
+  const attempt = lastAttempt.value
+  if (!attempt || attempt.wasCorrect) {
+    return -1
+  }
+
+  return attempt.sequence.findIndex((tile, index) => tile !== attempt.response[index])
+})
+const expectedTile = computed(() => {
+  const index = firstMismatchIndex.value
+  return index >= 0 ? lastAttempt.value?.sequence[index] : undefined
+})
+const selectedTile = computed(() => {
+  const index = firstMismatchIndex.value
+  return index >= 0 ? lastAttempt.value?.response[index] : undefined
+})
 
 function tileClass(tile: number): string {
   if (activeTile.value === tile) {
@@ -59,8 +76,18 @@ function tileClass(tile: number): string {
     return 'wm-tile--recalled'
   }
 
+  if (phase.value === 'feedback' && lastAttempt.value && !lastAttempt.value.wasCorrect) {
+    if (selectedTile.value === tile) {
+      return 'wm-tile--wrong'
+    }
+
+    if (expectedTile.value === tile) {
+      return 'wm-tile--expected'
+    }
+  }
+
   if (phase.value === 'feedback' && lastAttempt.value?.sequence.includes(tile)) {
-    return lastAttempt.value.wasCorrect ? 'wm-tile--correct' : 'wm-tile--missed'
+    return lastAttempt.value.wasCorrect ? 'wm-tile--correct' : ''
   }
 
   return ''
@@ -169,9 +196,14 @@ function tileClass(tile: number): string {
         <p v-else-if="lastAttempt?.wasCorrect" class="max-w-md text-sm leading-6 text-toned">
           Next span starts now.
         </p>
-        <p v-else class="max-w-md text-sm leading-6 text-toned">
-          Your score is the longest sequence recalled in exact order.
-        </p>
+        <div v-else class="flex flex-col items-center gap-3">
+          <p class="max-w-md text-sm leading-6 text-toned">
+            Red marks your first wrong tap. Green marks the tile that should have come next.
+          </p>
+          <UButton color="secondary" :disabled="isBusy" :loading="isBusy" @click.stop="finishGame">
+            Show score
+          </UButton>
+        </div>
       </div>
 
       <div
@@ -272,8 +304,13 @@ function tileClass(tile: number): string {
   background: color-mix(in oklab, var(--ui-success) 15%, var(--ui-bg-elevated));
 }
 
-.wm-tile--missed {
-  border-color: color-mix(in oklab, var(--ui-warning) 58%, var(--ui-border));
-  background: color-mix(in oklab, var(--ui-warning) 14%, var(--ui-bg-elevated));
+.wm-tile--expected {
+  border-color: color-mix(in oklab, var(--ui-success) 64%, var(--ui-border));
+  background: color-mix(in oklab, var(--ui-success) 18%, var(--ui-bg-elevated));
+}
+
+.wm-tile--wrong {
+  border-color: color-mix(in oklab, #ef4444 64%, var(--ui-border));
+  background: color-mix(in oklab, #ef4444 16%, var(--ui-bg-elevated));
 }
 </style>

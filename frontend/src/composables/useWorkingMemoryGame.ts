@@ -192,14 +192,11 @@ export function useWorkingMemoryGame(options: UseWorkingMemoryGameOptions) {
     phase.value = 'feedback'
     recallStartedAt = null
 
-    feedbackTimeout = setTimeout(() => {
-      if (wasCorrect) {
+    if (wasCorrect) {
+      feedbackTimeout = setTimeout(() => {
         startRound(currentSpan.value + 1)
-        return
-      }
-
-      void finishGame()
-    }, FEEDBACK_MS)
+      }, FEEDBACK_MS)
+    }
   }
 
   function selectTile(tile: number): void {
@@ -282,6 +279,7 @@ export function useWorkingMemoryGame(options: UseWorkingMemoryGameOptions) {
     errorMessage: session.errorMessage,
     startGame,
     resetGame,
+    finishGame,
     selectTile,
   }
 }
