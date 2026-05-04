@@ -1,7 +1,7 @@
 import { ApiError, parseJsonBody, request } from '@/lib/auth/http'
 
 export interface RecentGameSession {
-  score: number
+  metric_value: number
   completed_at: string
 }
 
@@ -15,8 +15,8 @@ function isRecentGameSession(value: unknown): value is RecentGameSession {
   }
 
   return (
-    typeof value.score === 'number' &&
-    Number.isFinite(value.score) &&
+    typeof value.metric_value === 'number' &&
+    Number.isFinite(value.metric_value) &&
     typeof value.completed_at === 'string'
   )
 }

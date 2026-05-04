@@ -2,7 +2,7 @@ import { computed, ref } from 'vue'
 
 import { ApiError } from '@/lib/auth'
 import { type GameResult } from '@/lib/play/result'
-import { startGameSession, submitGameResult } from '@/lib/play/session'
+import { startGameSession, submitGameResult, type FinalizeSessionResult } from '@/lib/play/session'
 import { getErrorMessage } from '@/lib/utils/errorHandling'
 import { useAuthStore } from '@/stores/auth'
 
@@ -14,6 +14,7 @@ export function useGameSession() {
   const isSubmitting = ref(false)
   const errorMessage = ref('')
   const lastResult = ref<GameResult | null>(null)
+  const lastFinalizeResult = ref<FinalizeSessionResult | null>(null)
 
   let lifecycleVersion = 0
 
@@ -22,7 +23,6 @@ export function useGameSession() {
     if (!token) throw new ApiError('No active session. Please sign in again.', 401)
     return token
   }
-
 
   /**
    * Bump the version counter and return the new version.
@@ -56,6 +56,7 @@ export function useGameSession() {
     isStarting.value = true
     errorMessage.value = ''
     lastResult.value = null
+    lastFinalizeResult.value = null
 
     try {
       const id = await startGameSession(gameCode, getAccessTokenOrThrow())
@@ -75,6 +76,7 @@ export function useGameSession() {
 
   async function submitResult(result: GameResult): Promise<void> {
     lastResult.value = result
+    lastFinalizeResult.value = null
 
     const sid = sessionId.value
     if (!sid) {
@@ -85,9 +87,18 @@ export function useGameSession() {
     const version = lifecycleVersion
     isSubmitting.value = true
     try {
-      await submitGameResult(sid, result, getAccessTokenOrThrow())
+      const finalizeResult = await submitGameResult(sid, result, getAccessTokenOrThrow())
       if (isStale(version)) return
-      errorMessage.value = ''
+
+      lastFinalizeResult.value = finalizeResult
+      if (finalizeResult.status === 'invalid') {
+        errorMessage.value =
+          typeof finalizeResult.metrics.reason === 'string'
+            ? finalizeResult.metrics.reason
+            : 'Game result was marked invalid.'
+      } else {
+        errorMessage.value = ''
+      }
     } catch (error) {
       if (isStale(version)) return
       errorMessage.value = getErrorMessage(error, 'Could not submit game result.')
@@ -103,8 +114,8 @@ export function useGameSession() {
     isSubmitting.value = false
     errorMessage.value = ''
     lastResult.value = null
+    lastFinalizeResult.value = null
   }
-
 
   const isBusy = computed(() => isStarting.value || isSubmitting.value)
 
@@ -116,6 +127,7 @@ export function useGameSession() {
     isBusy,
     errorMessage,
     lastResult,
+    lastFinalizeResult,
 
     // Lifecycle versioning utilities
     isStale,
