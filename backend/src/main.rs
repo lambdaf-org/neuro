@@ -28,9 +28,11 @@ use crate::models::assets::GameAssetRes;
 use crate::models::assets::{
     CreateAssetGroupReq, CreateGameAssetReq, UpdateAssetGroupReq, UpdateGameAssetReq,
 };
+use crate::models::game::FinalizeSessionResultRes;
 use crate::models::game::GameMetadata;
 use crate::models::game::PlayerStats;
-use crate::models::game::{CreateGameEventReq, GameEvent, GameEventAck, GameEventWsAck, GameEventWsError};
+use crate::models::game::{
+    CreateGameEventReq, GameEvent, GameEventAck, GameEventWsAck, GameEventWsError};
 use crate::models::game::{FinalizeSessionReq, GameSession, LeaderboardEntry};
 use crate::models::user::{LoginPayload, LoginRes, RegisterPayload};
 use actix_web::App;
@@ -101,6 +103,7 @@ async fn main() -> std::io::Result<()> {
             LoginPayload,
             LoginRes,
             FinalizeSessionReq,
+            FinalizeSessionResultRes,
             GameSession,
             LeaderboardEntry,
             CreateAssetGroupReq,

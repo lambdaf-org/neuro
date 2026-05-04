@@ -43,6 +43,28 @@ pub async fn get_game_assets(
         .map_err(|e| RepoError::ExtractionError(e.to_string()))
 }
 
+pub async fn get_game_assets_by_group_ids(
+    db: &SupabaseClient,
+    group_ids: &[i32],
+) -> Result<Vec<GameAssetRes>, RepoError> {
+    if group_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let rows = db
+        .select("game_assets")
+        .in_("group_id", group_ids)
+        .execute()
+        .await
+        .map_err(|e| {
+            log::error!("Failed fetching game assets: {e}");
+            RepoError::ExtractionError(String::from("Failed fetching game assets"))
+        })?;
+
+    serde_json::from_value(Value::Array(rows))
+        .map_err(|e| RepoError::ExtractionError(e.to_string()))
+}
+
 // TODO: This function is currently unused. Consider exposing it via a GET endpoint at /admin/asset-groups/{id}
 pub async fn get_asset_group_by_id(
     db: &SupabaseClient,

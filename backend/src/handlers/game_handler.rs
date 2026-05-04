@@ -7,15 +7,17 @@ use serde_json::json;
 use uuid::Uuid;
 
 use crate::models::app_state::AppState;
-use crate::models::game::GameEventAck;
 use crate::models::game::CreateGameEventReq;
 use crate::models::game::FinalizeSessionReq;
+use crate::models::game::FinalizeSessionResultRes;
+use crate::models::game::GameEventAck;
 use crate::models::game::GameEventWsAck;
 use crate::models::game::GameEventWsError;
 use crate::models::user::MiddlewareData;
 use crate::models::validate::Validate;
 use crate::repositories::game_repository;
 use crate::services::scoring::{SCORING_VERSION, ScoreOutcome, score_game};
+use crate::services::scoring_input::{self, TrialResolutionError};
 
 #[utoipa::path(
     post,
@@ -53,7 +55,7 @@ pub async fn start_game(
     ),
     request_body = FinalizeSessionReq,
     responses(
-        (status = 200, description = "Session finalized"),
+        (status = 200, description = "Session finalized", body = FinalizeSessionResultRes),
         (status = 400, description = "Validation error", body = Object),
         (status = 403, description = "Session belongs to another user"),
         (status = 404, description = "Session not found", body = Object),
@@ -81,9 +83,26 @@ pub async fn finalize_session(
     if session.user_id != ext_data.user_id {
         return HttpResponse::Forbidden().finish();
     }
+    if session.status != "in_progress" {
+        return HttpResponse::Conflict().json(json!({"error": "session already finalized"}));
+    }
 
-    let (status, metric_value, metrics, scoring_version) = if !body.trials.is_empty() {
-        match score_game(&session.game_code, &body.trials) {
+    if session.game_code == "gf" && body.trials.is_empty() {
+        return HttpResponse::BadRequest()
+            .json(json!({"error": "Pattern Logic requires selected option trials"}));
+    }
+
+    let scoring_trials = if session.game_code == "gf" {
+        match scoring_input::build_pattern_logic_trials(&state.sb_client, &body.trials).await {
+            Ok(trials) => trials,
+            Err(error) => return trial_resolution_error_to_response(error),
+        }
+    } else {
+        body.trials.clone()
+    };
+
+    let (status, metric_value, metrics, scoring_version) = if !scoring_trials.is_empty() {
+        match score_game(&session.game_code, &scoring_trials) {
             ScoreOutcome::Valid { metric, metrics } => {
                 ("completed", Some(metric), metrics, SCORING_VERSION)
             }
@@ -93,6 +112,13 @@ pub async fn finalize_session(
         }
     } else {
         ("completed", body.score, json!({}), 0)
+    };
+
+    let result = FinalizeSessionResultRes {
+        status: status.to_string(),
+        metric_value,
+        metrics: metrics.clone(),
+        scoring_version,
     };
 
     match game_repository::finalize_session(
@@ -105,8 +131,17 @@ pub async fn finalize_session(
     )
     .await
     {
-        Ok(_) => HttpResponse::Ok().finish(),
+        Ok(_) => HttpResponse::Ok().json(result),
         Err(e) => e.to_response(),
+    }
+}
+
+fn trial_resolution_error_to_response(error: TrialResolutionError) -> HttpResponse {
+    match error {
+        TrialResolutionError::BadRequest(message) => {
+            HttpResponse::BadRequest().json(json!({"error": message}))
+        }
+        TrialResolutionError::Repository(error) => error.to_response(),
     }
 }
 
@@ -407,17 +442,12 @@ fn parse_game_event_ws_payload(text: &str) -> std::result::Result<CreateGameEven
     let event = serde_json::from_str::<CreateGameEventReq>(text)
         .map_err(|_| String::from("invalid event payload"))?;
 
-    event
-        .validate()
-        .map_err(|errors| errors.join(", "))?;
+    event.validate().map_err(|errors| errors.join(", "))?;
 
     Ok(event)
 }
 
-async fn send_game_event_ws_ack(
-    ws_session: &mut actix_ws::Session,
-    event: GameEventAck,
-) {
+async fn send_game_event_ws_ack(ws_session: &mut actix_ws::Session, event: GameEventAck) {
     let payload = json!(GameEventWsAck {
         message_type: String::from("event_stored"),
         event,
@@ -426,10 +456,7 @@ async fn send_game_event_ws_ack(
     let _ = ws_session.text(payload).await;
 }
 
-async fn send_game_event_ws_error(
-    ws_session: &mut actix_ws::Session,
-    error: &str,
-) {
+async fn send_game_event_ws_error(ws_session: &mut actix_ws::Session, error: &str) {
     let payload = json!(GameEventWsError {
         message_type: String::from("error"),
         error: String::from(error),
