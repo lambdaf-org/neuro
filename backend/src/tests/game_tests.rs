@@ -106,6 +106,45 @@ fn working_memory_scoring_uses_max_valid_span() {
 }
 
 #[test]
+fn working_memory_scoring_does_not_count_failed_span() {
+    let trials = vec![
+        TrialPayload {
+            ms: Some(1200.0),
+            span: Some(2),
+            correct: Some(true),
+            magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
+        },
+        TrialPayload {
+            ms: Some(1800.0),
+            span: Some(3),
+            correct: Some(true),
+            magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
+        },
+        TrialPayload {
+            ms: Some(2100.0),
+            span: Some(4),
+            correct: Some(false),
+            magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
+        },
+    ];
+
+    match score_game("gwm", &trials) {
+        ScoreOutcome::Valid { metric, metrics } => {
+            assert_eq!(metric, 3.0);
+            assert_eq!(integer_metric_field(&metrics, "n_valid"), 2);
+            assert_eq!(integer_metric_field(&metrics, "n_fail"), 1);
+        }
+        ScoreOutcome::Invalid { reason } => panic!("unexpected invalid score: {reason}"),
+    }
+}
+
+#[test]
 fn processing_speed_scoring_counts_correct_trials() {
     let trials = vec![
         TrialPayload {
