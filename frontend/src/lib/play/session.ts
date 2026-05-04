@@ -5,8 +5,34 @@ interface StartSessionResponse {
   id: string
 }
 
+export interface FluidIntelligenceAnswerSubmission {
+  puzzle_id: number
+  selected_option_id: number
+  response_ms: number
+}
+
+export interface FinalizeSessionResult {
+  status: string
+  metric_value: number | null
+  metrics: Record<string, unknown>
+  scoring_version: number
+}
+
+export interface FluidIntelligenceSubmissionResult {
+  score: number
+  total_answers: number
+  correct_answers: number
+  incorrect_answers: number
+  average_response_ms: number
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function numberMetric(metrics: Record<string, unknown>, key: string, fallback = 0): number {
+  const value = metrics[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
 }
 
 function parseStartSessionBody(rawBody: string): StartSessionResponse {
@@ -29,6 +55,27 @@ function parseStartSessionBody(rawBody: string): StartSessionResponse {
   }
 
   throw new ApiError('Unexpected game session response from server.', 500)
+}
+
+function parseFinalizeSessionResultBody(rawBody: string): FinalizeSessionResult {
+  const parsed = parseJsonBody(rawBody)
+
+  if (
+    !isRecord(parsed) ||
+    typeof parsed.status !== 'string' ||
+    (typeof parsed.metric_value !== 'number' && parsed.metric_value !== null) ||
+    !isRecord(parsed.metrics) ||
+    typeof parsed.scoring_version !== 'number'
+  ) {
+    throw new ApiError('Unexpected Pattern Logic result response from server.', 500)
+  }
+
+  return {
+    status: parsed.status,
+    metric_value: parsed.metric_value,
+    metrics: parsed.metrics,
+    scoring_version: parsed.scoring_version,
+  }
 }
 
 function withAuthorization(accessToken: string, init: RequestInit): RequestInit {
@@ -66,4 +113,48 @@ export async function submitGameResult(
     }),
     parseEmptyBody,
   )
+}
+
+export async function submitFluidIntelligenceAnswers(
+  sessionId: string,
+  answers: FluidIntelligenceAnswerSubmission[],
+  accessToken: string,
+): Promise<FluidIntelligenceSubmissionResult> {
+  const result = await request<FinalizeSessionResult>(
+    `/api/game/session/${encodeURIComponent(sessionId)}`,
+    withAuthorization(accessToken, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        trials: answers.map((answer) => ({
+          puzzle_id: answer.puzzle_id,
+          selected_option_id: answer.selected_option_id,
+          ms: answer.response_ms,
+        })),
+      }),
+    }),
+    parseFinalizeSessionResultBody,
+  )
+
+  if (result.status !== 'completed' || result.metric_value === null) {
+    const reason =
+      typeof result.metrics.reason === 'string'
+        ? result.metrics.reason
+        : 'Pattern Logic result was not scored.'
+    throw new ApiError(reason, 422)
+  }
+
+  const totalAnswers = Math.max(
+    0,
+    Math.round(numberMetric(result.metrics, 'n_trials', answers.length)),
+  )
+  const incorrectAnswers = Math.max(0, Math.round(numberMetric(result.metrics, 'misses')))
+  const correctAnswers = Math.max(0, totalAnswers - incorrectAnswers)
+
+  return {
+    score: Math.round(result.metric_value * 100),
+    total_answers: totalAnswers,
+    correct_answers: correctAnswers,
+    incorrect_answers: incorrectAnswers,
+    average_response_ms: Math.max(0, Math.round(numberMetric(result.metrics, 'mean_rt'))),
+  }
 }

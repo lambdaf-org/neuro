@@ -20,24 +20,32 @@ fn reaction_scoring_uses_median_valid_ms() {
             span: None,
             correct: None,
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: Some(200.0),
             span: None,
             correct: None,
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: Some(300.0),
             span: None,
             correct: None,
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: Some(400.0),
             span: None,
             correct: None,
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
     ];
 
@@ -58,24 +66,32 @@ fn working_memory_scoring_uses_max_valid_span() {
             span: Some(2),
             correct: None,
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: None,
             span: Some(5),
             correct: None,
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: None,
             span: Some(101),
             correct: None,
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: None,
             span: Some(4),
             correct: None,
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
     ];
 
@@ -97,30 +113,40 @@ fn processing_speed_scoring_counts_correct_trials() {
             span: None,
             correct: Some(true),
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: Some(400.0),
             span: None,
             correct: Some(false),
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: Some(500.0),
             span: None,
             correct: Some(true),
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: Some(250.0),
             span: None,
             correct: Some(true),
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: Some(350.0),
             span: None,
             correct: Some(false),
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
     ];
 
@@ -139,34 +165,44 @@ fn processing_speed_scoring_counts_correct_trials() {
 fn pattern_logic_scoring_uses_accuracy() {
     let trials = vec![
         TrialPayload {
-            ms: None,
+            ms: Some(1000.0),
             span: None,
             correct: Some(true),
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(1500.0),
             span: None,
             correct: Some(false),
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(2000.0),
             span: None,
             correct: Some(true),
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(2500.0),
             span: None,
             correct: Some(true),
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(3000.0),
             span: None,
             correct: Some(false),
             magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
         },
     ];
 
@@ -175,6 +211,7 @@ fn pattern_logic_scoring_uses_accuracy() {
             assert_eq!(metric, 0.6);
             assert_eq!(integer_metric_field(&metrics, "n_trials"), 5);
             assert_eq!(integer_metric_field(&metrics, "misses"), 2);
+            assert_eq!(metric_field(&metrics, "mean_rt"), 2000.0);
         }
         ScoreOutcome::Invalid { reason } => panic!("unexpected invalid score: {reason}"),
     }
@@ -188,30 +225,40 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             span: None,
             correct: Some(true),
             magnitude: Some(45.0),
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: None,
             span: None,
             correct: Some(false),
             magnitude: Some(90.0),
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: None,
             span: None,
             correct: Some(true),
             magnitude: Some(135.0),
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: None,
             span: None,
             correct: Some(true),
             magnitude: Some(180.0),
+            puzzle_id: None,
+            selected_option_id: None,
         },
         TrialPayload {
             ms: None,
             span: None,
             correct: Some(false),
             magnitude: Some(90.0),
+            puzzle_id: None,
+            selected_option_id: None,
         },
     ];
 
