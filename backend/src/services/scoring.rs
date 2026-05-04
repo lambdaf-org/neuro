@@ -80,9 +80,13 @@ impl Scorer for WorkingMemoryScorer {
     fn score(&self, trials: &[TrialPayload]) -> ScoreOutcome {
         let valid_trials = trials
             .iter()
-            .filter_map(|trial| trial.span.map(|span| (span, trial.correct)))
-            .filter(|(span, _)| {
-                (*span >= MIN_WORKING_MEMORY_SPAN) && (*span <= MAX_WORKING_MEMORY_SPAN)
+            .filter_map(|trial| match (trial.span, trial.correct) {
+                (Some(span), Some(correct))
+                    if span >= MIN_WORKING_MEMORY_SPAN && span <= MAX_WORKING_MEMORY_SPAN =>
+                {
+                    Some((span, correct))
+                }
+                _ => None,
             })
             .collect::<Vec<_>>();
 
@@ -94,27 +98,19 @@ impl Scorer for WorkingMemoryScorer {
 
         let correct_spans = valid_trials
             .iter()
-            .filter_map(|(span, correct)| {
-                if correct.unwrap_or(true) {
-                    Some(*span)
-                } else {
-                    None
-                }
-            })
+            .filter_map(|(span, correct)| if *correct { Some(*span) } else { None })
             .collect::<Vec<_>>();
         let max_span = correct_spans.iter().copied().max().unwrap_or(0);
         let invalid_count = trials.len().saturating_sub(valid_trials.len());
-        let failed_count = valid_trials
-            .iter()
-            .filter(|(_, correct)| correct.is_some_and(|value| !value))
-            .count()
-            + invalid_count;
+        let failed_count = valid_trials.iter().filter(|(_, correct)| !*correct).count();
 
         ScoreOutcome::Valid {
             metric: f64::from(max_span),
             metrics: json!({
-                "n_valid": correct_spans.len() as i64,
+                "n_valid": valid_trials.len() as i64,
+                "n_correct": correct_spans.len() as i64,
                 "n_fail": failed_count as i64,
+                "n_dropped": invalid_count as i64,
                 "retries": failed_count as i64,
             }),
         }
