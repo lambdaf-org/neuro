@@ -63,6 +63,25 @@ describe('createMentalRotationPuzzles', () => {
 
     expect(createMentalRotationPuzzles(malformedGroups)).toEqual([])
   })
+
+  it('skips malformed groups with duplicate reference assets', () => {
+    const malformedGroups = [
+      {
+        ...groups[0]!,
+        assets: [
+          ...groups[0]!.assets,
+          {
+            id: 15,
+            group_id: 1,
+            label: 'reference',
+            image_url: 'https://example.test/reference-extra.svg',
+          },
+        ],
+      },
+    ]
+
+    expect(createMentalRotationPuzzles(malformedGroups)).toEqual([])
+  })
 })
 
 describe('summarizeMentalRotationAnswers', () => {

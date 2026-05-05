@@ -59,12 +59,14 @@ function isReferenceAsset(asset: GameAsset): boolean {
 }
 
 function toPuzzle(group: AssetGroup, random: () => number): MentalRotationPuzzle | null {
-  const reference = group.assets.find(isReferenceAsset)
+  const references = group.assets.filter(isReferenceAsset)
   const options = group.assets.filter((asset) => !isReferenceAsset(asset))
 
-  if (!reference || options.length !== 4) {
+  if (references.length !== 1 || options.length !== 4) {
     return null
   }
+
+  const reference = references[0]!
 
   return {
     id: group.id,
