@@ -11,6 +11,8 @@ export interface FluidIntelligenceAnswerSubmission {
   response_ms: number
 }
 
+export type MentalRotationAnswerSubmission = FluidIntelligenceAnswerSubmission
+
 export interface FinalizeSessionResult {
   status: string
   metric_value: number | null
@@ -25,6 +27,8 @@ export interface FluidIntelligenceSubmissionResult {
   incorrect_answers: number
   average_response_ms: number
 }
+
+export type MentalRotationSubmissionResult = FluidIntelligenceSubmissionResult
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -128,6 +132,33 @@ export async function submitFluidIntelligenceAnswers(
   answers: FluidIntelligenceAnswerSubmission[],
   accessToken: string,
 ): Promise<FluidIntelligenceSubmissionResult> {
+  return submitImageChoiceAnswers(
+    sessionId,
+    answers,
+    accessToken,
+    'Pattern Logic result was not scored.',
+  )
+}
+
+export async function submitMentalRotationAnswers(
+  sessionId: string,
+  answers: MentalRotationAnswerSubmission[],
+  accessToken: string,
+): Promise<MentalRotationSubmissionResult> {
+  return submitImageChoiceAnswers(
+    sessionId,
+    answers,
+    accessToken,
+    'Mental Rotation result was not scored.',
+  )
+}
+
+async function submitImageChoiceAnswers(
+  sessionId: string,
+  answers: FluidIntelligenceAnswerSubmission[],
+  accessToken: string,
+  unscoredMessage: string,
+): Promise<FluidIntelligenceSubmissionResult> {
   const result = await request<FinalizeSessionResult>(
     `/api/game/session/${encodeURIComponent(sessionId)}`,
     withAuthorization(accessToken, {
@@ -145,9 +176,7 @@ export async function submitFluidIntelligenceAnswers(
 
   if (result.status !== 'completed' || result.metric_value === null) {
     const reason =
-      typeof result.metrics.reason === 'string'
-        ? result.metrics.reason
-        : 'Pattern Logic result was not scored.'
+      typeof result.metrics.reason === 'string' ? result.metrics.reason : unscoredMessage
     throw new ApiError(reason, 422)
   }
 

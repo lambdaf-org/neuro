@@ -287,10 +287,10 @@ fn pattern_logic_scoring_uses_accuracy() {
 }
 
 #[test]
-fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
+fn mental_rotation_scoring_uses_accuracy_and_response_time() {
     let trials = vec![
         TrialPayload {
-            ms: None,
+            ms: Some(900.0),
             span: None,
             correct: Some(true),
             magnitude: Some(45.0),
@@ -298,7 +298,7 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(1100.0),
             span: None,
             correct: Some(false),
             magnitude: Some(90.0),
@@ -306,7 +306,7 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(1300.0),
             span: None,
             correct: Some(true),
             magnitude: Some(135.0),
@@ -314,7 +314,7 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(1700.0),
             span: None,
             correct: Some(true),
             magnitude: Some(180.0),
@@ -322,7 +322,7 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(2000.0),
             span: None,
             correct: Some(false),
             magnitude: Some(90.0),
@@ -336,6 +336,7 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             assert_eq!(metric, 0.6);
             assert_eq!(integer_metric_field(&metrics, "n_trials"), 5);
             assert_eq!(integer_metric_field(&metrics, "misses"), 2);
+            assert_eq!(metric_field(&metrics, "mean_rt"), 1400.0);
             assert_eq!(metric_field(&metrics, "mean_magnitude"), 108.0);
         }
         ScoreOutcome::Invalid { reason } => panic!("unexpected invalid score: {reason}"),
