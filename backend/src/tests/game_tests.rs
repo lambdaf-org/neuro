@@ -337,7 +337,7 @@ fn mental_rotation_scoring_uses_accuracy_and_response_time() {
             assert_eq!(integer_metric_field(&metrics, "n_trials"), 5);
             assert_eq!(integer_metric_field(&metrics, "misses"), 2);
             assert_eq!(metric_field(&metrics, "mean_rt"), 1400.0);
-            assert_eq!(metric_field(&metrics, "mean_magnitude"), 108.0);
+            assert!(metrics.get("mean_magnitude").is_none());
         }
         ScoreOutcome::Invalid { reason } => panic!("unexpected invalid score: {reason}"),
     }

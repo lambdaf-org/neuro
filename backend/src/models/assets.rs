@@ -32,14 +32,14 @@ fn playable_options_with_prompt(
     assets: &[GameAssetRes],
     is_prompt_asset: fn(&GameAssetRes) -> bool,
 ) -> Option<Vec<&GameAssetRes>> {
-    let has_prompt = assets.iter().any(is_prompt_asset);
+    let prompt_count = assets.iter().filter(|asset| is_prompt_asset(asset)).count();
     let options: Vec<_> = assets
         .iter()
         .filter(|asset| !is_prompt_asset(asset))
         .collect();
     let correct_options = options.iter().filter(|asset| asset.is_correct).count();
 
-    if has_prompt && options.len() == 4 && correct_options == 1 {
+    if prompt_count == 1 && options.len() == 4 && correct_options == 1 {
         Some(options)
     } else {
         None
