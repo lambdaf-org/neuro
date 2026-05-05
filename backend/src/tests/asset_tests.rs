@@ -154,6 +154,22 @@ fn playable_fluid_options_requires_matrix_four_options_and_one_correct() {
 }
 
 #[test]
+fn playable_mental_rotation_options_requires_reference_four_options_and_one_correct() {
+    let assets = vec![
+        fluid_asset(1, "reference", false),
+        fluid_asset(2, "option_0", true),
+        fluid_asset(3, "option_1", false),
+        fluid_asset(4, "option_2", false),
+        fluid_asset(5, "option_3", false),
+    ];
+
+    let options = playable_mental_rotation_options(&assets).unwrap();
+
+    assert_eq!(options.len(), 4);
+    assert_eq!(options.iter().filter(|asset| asset.is_correct).count(), 1);
+}
+
+#[test]
 fn playable_fluid_options_rejects_partial_groups() {
     let assets = vec![
         fluid_asset(1, "matrix", false),
