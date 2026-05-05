@@ -8,8 +8,9 @@ import { useAuthStore } from '@/stores/auth'
 
 const PROFILE_HISTORY_GAME_IDS = new Set<GameId>([
   'reaction-time',
-  'processing-speed',
-  'fluid-intelligence',
+  'symbol-matching',
+  'pattern-logic',
+  'sequence-memory',
 ])
 
 const PROFILE_HISTORY_MODULES = PLAY_MODULES.filter((module) =>

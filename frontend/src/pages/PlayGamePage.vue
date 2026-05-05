@@ -14,10 +14,13 @@ import { findPlayModuleById } from '@/lib/play/modules'
  */
 const GAME_REGISTRY: Partial<Record<GameId, ReturnType<typeof defineAsyncComponent>>> = {
   'reaction-time': defineAsyncComponent(() => import('@/components/play/ReactionTestGame.vue')),
-  'processing-speed': defineAsyncComponent(() => import('@/components/play/ProcessingSpeedGame.vue')),
-  'fluid-intelligence': defineAsyncComponent(
+  'symbol-matching': defineAsyncComponent(
+    () => import('@/components/play/ProcessingSpeedGame.vue'),
+  ),
+  'pattern-logic': defineAsyncComponent(
     () => import('@/components/play/FluidIntelligenceGame.vue'),
   ),
+  'sequence-memory': defineAsyncComponent(() => import('@/components/play/WorkingMemoryGame.vue')),
 }
 
 const route = useRoute()
@@ -30,14 +33,20 @@ const gameId = computed(() => {
 
 const selectedModule = computed(() => findPlayModuleById(gameId.value))
 const gameComponent = computed(() => GAME_REGISTRY[gameId.value as GameId] ?? null)
-const comingSoonModule = computed(
-  () => (selectedModule.value && !gameComponent.value ? selectedModule.value : null),
+const comingSoonModule = computed(() =>
+  selectedModule.value && !gameComponent.value ? selectedModule.value : null,
 )
 const backendGameCode = computed(() => selectedModule.value?.chcCode.toLowerCase() ?? '')
-const { metadata, isLoading: isMetadataLoading, errorMessage: metadataError } = useGameMetadata({
+const {
+  metadata,
+  isLoading: isMetadataLoading,
+  errorMessage: metadataError,
+} = useGameMetadata({
   gameCode: backendGameCode,
 })
-const pageChcCode = computed(() => metadata.value?.chc_factor || selectedModule.value?.chcCode || '')
+const pageChcCode = computed(
+  () => metadata.value?.chc_factor || selectedModule.value?.chcCode || '',
+)
 const pageTitle = computed(() => metadata.value?.display_name || selectedModule.value?.name || '')
 </script>
 
