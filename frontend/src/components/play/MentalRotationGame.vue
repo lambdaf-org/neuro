@@ -183,10 +183,11 @@ const resultStats = computed(() => [
 
         <div class="grid w-full grid-cols-2 gap-3">
           <UCard
-            v-for="item in resultStats"
+            v-for="(item, index) in resultStats"
             :key="item.label"
             variant="subtle"
             :ui="{ body: 'p-4' }"
+            :class="index === resultStats.length - 1 ? 'col-span-2' : ''"
           >
             <div class="flex flex-col gap-1">
               <span class="text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-toned">
