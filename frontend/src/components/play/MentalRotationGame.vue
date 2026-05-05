@@ -15,7 +15,6 @@ const {
   currentPuzzle,
   currentIndex,
   totalPuzzles,
-  answers,
   hasSubmittedResult,
   score,
   correctAnswers,
@@ -47,7 +46,6 @@ const progressPercent = computed(() =>
 const resultStats = computed(() => [
   { label: 'Correct', value: correctAnswers.value },
   { label: 'Wrong', value: incorrectAnswers.value },
-  { label: 'Items', value: answers.value.length },
   { label: 'Avg. response', value: `${averageResponseMs.value} ms` },
 ])
 </script>
@@ -114,9 +112,8 @@ const resultStats = computed(() => [
         v-else-if="phase === 'running' && currentPuzzle"
         class="play-surface__content play-surface__content--wide max-w-2xl"
       >
-        <div class="flex w-full items-center justify-between gap-3">
+        <div class="flex w-full items-center gap-3">
           <UBadge color="secondary" variant="soft" size="lg">{{ progressLabel }}</UBadge>
-          <UBadge color="neutral" variant="soft" size="lg">Answered {{ answers.length }}</UBadge>
         </div>
 
         <div class="h-2 w-full overflow-hidden rounded-full bg-muted">
