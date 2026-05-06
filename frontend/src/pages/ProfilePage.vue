@@ -39,7 +39,7 @@ function formatMetric(value: number, gameId: GameId): string {
     return `${scoreFormatter.format(value)} ms`
   }
 
-  if (gameId === 'pattern-logic') {
+  if (gameId === 'pattern-logic' || gameId === 'mental-rotation') {
     return percentFormatter.format(value)
   }
 
@@ -51,7 +51,7 @@ function metricLabel(gameId: GameId): string {
     return 'Median RT'
   }
 
-  if (gameId === 'pattern-logic') {
+  if (gameId === 'pattern-logic' || gameId === 'mental-rotation') {
     return 'Accuracy'
   }
 

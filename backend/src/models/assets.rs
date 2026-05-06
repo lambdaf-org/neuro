@@ -24,23 +24,42 @@ pub fn is_fluid_matrix_asset(asset: &GameAssetRes) -> bool {
     asset.label.trim().eq_ignore_ascii_case("matrix")
 }
 
-pub fn playable_fluid_options(assets: &[GameAssetRes]) -> Option<Vec<&GameAssetRes>> {
-    let has_matrix = assets.iter().any(is_fluid_matrix_asset);
+pub fn is_mental_rotation_reference_asset(asset: &GameAssetRes) -> bool {
+    asset.label.trim().eq_ignore_ascii_case("reference")
+}
+
+fn playable_options_with_prompt(
+    assets: &[GameAssetRes],
+    is_prompt_asset: fn(&GameAssetRes) -> bool,
+) -> Option<Vec<&GameAssetRes>> {
+    let prompt_count = assets.iter().filter(|asset| is_prompt_asset(asset)).count();
     let options: Vec<_> = assets
         .iter()
-        .filter(|asset| !is_fluid_matrix_asset(asset))
+        .filter(|asset| !is_prompt_asset(asset))
         .collect();
     let correct_options = options.iter().filter(|asset| asset.is_correct).count();
 
-    if has_matrix && options.len() == 4 && correct_options == 1 {
+    if prompt_count == 1 && options.len() == 4 && correct_options == 1 {
         Some(options)
     } else {
         None
     }
 }
 
+pub fn playable_fluid_options(assets: &[GameAssetRes]) -> Option<Vec<&GameAssetRes>> {
+    playable_options_with_prompt(assets, is_fluid_matrix_asset)
+}
+
 pub fn is_playable_fluid_group(group: &AssetGroupRes) -> bool {
     playable_fluid_options(&group.assets).is_some()
+}
+
+pub fn playable_mental_rotation_options(assets: &[GameAssetRes]) -> Option<Vec<&GameAssetRes>> {
+    playable_options_with_prompt(assets, is_mental_rotation_reference_asset)
+}
+
+pub fn is_playable_mental_rotation_group(group: &AssetGroupRes) -> bool {
+    playable_mental_rotation_options(&group.assets).is_some()
 }
 
 #[derive(Serialize, ToSchema)]

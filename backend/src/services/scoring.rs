@@ -195,7 +195,7 @@ impl Scorer for MentalRotationScorer {
     fn score(&self, trials: &[TrialPayload]) -> ScoreOutcome {
         let valid_trials = trials
             .iter()
-            .filter_map(|trial| trial.correct.map(|correct| (correct, trial.magnitude)))
+            .filter_map(|trial| trial.correct.map(|correct| (correct, trial.ms)))
             .collect::<Vec<_>>();
 
         if valid_trials.len() < MIN_ACCURACY_TRIALS {
@@ -204,17 +204,20 @@ impl Scorer for MentalRotationScorer {
             };
         }
 
-        let right_count = valid_trials.iter().filter(|(correct, _)| *correct).count();
-        let misses = valid_trials.len().saturating_sub(right_count);
-        let magnitudes = valid_trials
+        let right_count = valid_trials
             .iter()
-            .filter_map(|(_, magnitude)| *magnitude)
-            .filter(|magnitude| magnitude.is_finite())
+            .filter(|(correct, _)| *correct)
+            .count();
+        let misses = valid_trials.len().saturating_sub(right_count);
+        let response_times = valid_trials
+            .iter()
+            .filter_map(|(_, ms)| *ms)
+            .filter(|ms| ms.is_finite() && *ms >= 0.0)
             .collect::<Vec<_>>();
-        let mean_magnitude = if magnitudes.is_empty() {
+        let mean_rt = if response_times.is_empty() {
             0.0
         } else {
-            magnitudes.iter().sum::<f64>() / magnitudes.len() as f64
+            response_times.iter().sum::<f64>() / response_times.len() as f64
         };
 
         ScoreOutcome::Valid {
@@ -222,7 +225,7 @@ impl Scorer for MentalRotationScorer {
             metrics: json!({
                 "n_trials": valid_trials.len() as i64,
                 "misses": misses as i64,
-                "mean_magnitude": mean_magnitude,
+                "mean_rt": mean_rt,
             }),
         }
     }

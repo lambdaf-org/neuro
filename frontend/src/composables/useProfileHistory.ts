@@ -11,6 +11,7 @@ const PROFILE_HISTORY_GAME_IDS = new Set<GameId>([
   'symbol-matching',
   'pattern-logic',
   'sequence-memory',
+  'mental-rotation',
 ])
 
 const PROFILE_HISTORY_MODULES = PLAY_MODULES.filter((module) =>
