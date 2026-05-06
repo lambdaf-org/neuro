@@ -21,6 +21,7 @@ const GAME_REGISTRY: Partial<Record<GameId, ReturnType<typeof defineAsyncCompone
     () => import('@/components/play/FluidIntelligenceGame.vue'),
   ),
   'sequence-memory': defineAsyncComponent(() => import('@/components/play/WorkingMemoryGame.vue')),
+  'mental-rotation': defineAsyncComponent(() => import('@/components/play/MentalRotationGame.vue')),
 }
 
 const route = useRoute()

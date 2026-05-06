@@ -87,18 +87,25 @@ pub async fn finalize_session(
         return HttpResponse::Conflict().json(json!({"error": "session already finalized"}));
     }
 
-    if session.game_code == "gf" && body.trials.is_empty() {
-        return HttpResponse::BadRequest()
-            .json(json!({"error": "Pattern Logic requires selected option trials"}));
-    }
-
-    let scoring_trials = if session.game_code == "gf" {
-        match scoring_input::build_pattern_logic_trials(&state.sb_client, &body.trials).await {
-            Ok(trials) => trials,
-            Err(error) => return trial_resolution_error_to_response(error),
+    let scoring_trials = match session.game_code.as_str() {
+        "gf" | "gv" if body.trials.is_empty() => {
+            return HttpResponse::BadRequest()
+                .json(json!({"error": "selected option trials are required"}));
         }
-    } else {
-        body.trials.clone()
+        "gf" => {
+            match scoring_input::build_pattern_logic_trials(&state.sb_client, &body.trials).await {
+                Ok(trials) => trials,
+                Err(error) => return trial_resolution_error_to_response(error),
+            }
+        }
+        "gv" => {
+            match scoring_input::build_mental_rotation_trials(&state.sb_client, &body.trials).await
+            {
+                Ok(trials) => trials,
+                Err(error) => return trial_resolution_error_to_response(error),
+            }
+        }
+        _ => body.trials.clone(),
     };
 
     let (status, metric_value, metrics, scoring_version) = if !scoring_trials.is_empty() {
