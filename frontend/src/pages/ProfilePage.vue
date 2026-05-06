@@ -1,20 +1,19 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { reactive, ref } from 'vue'
 
 import ProtectedNav from '@/components/ProtectedNav.vue'
-import { useProfileHistory } from '@/composables/useProfileHistory'
+import { useProfileHistory, type ProfileGameEntry } from '@/composables/useProfileHistory'
+import { getRecentGameSessions, type RecentGameSession } from '@/lib/play/history'
 import type { GameId } from '@/lib/play/modules'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
-const { histories, isLoading, errorMessage, hasSessions, reload } = useProfileHistory()
+const { entries, isLoading, errorMessage, hasSessions } = useProfileHistory()
 
-const session = computed(() => auth.session)
-
-const dateFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
+const modalOpen = ref(false)
+const activeEntry = ref<ProfileGameEntry | null>(null)
+const recentSessions = reactive<Record<string, RecentGameSession[]>>({})
+const recentLoading = reactive<Record<string, boolean>>({})
 
 const scoreFormatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
@@ -25,14 +24,10 @@ const percentFormatter = new Intl.NumberFormat(undefined, {
   style: 'percent',
 })
 
-function formatCompletedAt(value: string): string {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return '-'
-  }
-
-  return dateFormatter.format(date)
-}
+const dateFormatter = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
 
 function formatMetric(value: number, gameId: GameId): string {
   if (gameId === 'reaction-time') {
@@ -46,24 +41,43 @@ function formatMetric(value: number, gameId: GameId): string {
   return scoreFormatter.format(value)
 }
 
+function formatDate(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return dateFormatter.format(date)
+}
+
 function metricLabel(gameId: GameId): string {
-  if (gameId === 'reaction-time') {
-    return 'Median RT'
-  }
+  if (gameId === 'reaction-time') return 'Median RT'
+  if (gameId === 'pattern-logic' || gameId === 'mental-rotation') return 'Accuracy'
+  if (gameId === 'symbol-matching') return 'Correct'
+  if (gameId === 'sequence-memory') return 'Max Span'
+  return 'Score'
+}
 
-  if (gameId === 'pattern-logic' || gameId === 'mental-rotation') {
-    return 'Accuracy'
-  }
+function directionHint(gameId: GameId): string {
+  return gameId === 'reaction-time' ? 'lower is better' : 'higher is better'
+}
 
-  if (gameId === 'symbol-matching') {
-    return 'Correct'
-  }
+async function openDetail(entry: ProfileGameEntry) {
+  if (!entry.stats) return
 
-  if (gameId === 'sequence-memory') {
-    return 'Max span'
-  }
+  activeEntry.value = entry
+  modalOpen.value = true
 
-  return 'Metric'
+  if (recentSessions[entry.gameCode]) return
+
+  recentLoading[entry.gameCode] = true
+  try {
+    auth.hydrate()
+    const token = auth.accessToken
+    if (!token) return
+    recentSessions[entry.gameCode] = await getRecentGameSessions(entry.gameCode, token)
+  } catch {
+    recentSessions[entry.gameCode] = []
+  } finally {
+    recentLoading[entry.gameCode] = false
+  }
 }
 </script>
 
@@ -73,59 +87,36 @@ function metricLabel(gameId: GameId): string {
 
     <main class="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
       <div class="space-y-8">
+        <!-- Header -->
         <header class="space-y-3">
           <p class="text-xs font-semibold uppercase tracking-[0.18em] text-secondary/90">Profile</p>
-          <h1 class="text-2xl font-semibold text-highlighted sm:text-3xl">Your History</h1>
+          <h1 class="text-2xl font-semibold text-highlighted sm:text-3xl">Cognitive Profile</h1>
           <p class="max-w-2xl text-sm leading-6 text-toned sm:text-base">
-            Review your recent sessions for the active cognitive modules.
+            Your best, average, and most recent scores across all cognitive benchmarks.
           </p>
         </header>
 
-        <UCard variant="subtle" class="border border-default/60">
-          <dl class="grid gap-5 text-sm sm:grid-cols-2">
-            <div class="space-y-1">
-              <dt class="font-medium text-muted">Email</dt>
-              <dd class="text-highlighted">{{ session?.email || '-' }}</dd>
-            </div>
-
-            <div class="space-y-1">
-              <dt class="font-medium text-muted">User ID</dt>
-              <dd class="break-all text-highlighted">{{ session?.userId || '-' }}</dd>
-            </div>
-          </dl>
-        </UCard>
-
+        <!-- Stats Section -->
         <section class="space-y-4">
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="space-y-1">
-              <h2 class="text-lg font-semibold text-highlighted">Game Sessions</h2>
-              <p class="text-sm text-toned">Active benchmark sessions.</p>
-            </div>
-
-            <UButton
-              color="neutral"
-              variant="outline"
-              size="sm"
-              icon="i-lucide-refresh-cw"
-              :loading="isLoading"
-              @click="reload"
-            >
-              Refresh
-            </UButton>
+          <div class="space-y-1">
+            <h2 class="text-lg font-semibold text-highlighted">Performance Overview</h2>
+            <p class="text-sm text-toned">Best · Average · Recent per benchmark.</p>
           </div>
 
+          <!-- Error -->
           <UAlert
             v-if="errorMessage"
             color="error"
             variant="soft"
             icon="i-lucide-circle-alert"
-            title="History unavailable"
+            title="Stats unavailable"
             :description="errorMessage"
           />
 
+          <!-- Loading skeletons -->
           <div v-if="isLoading" class="grid gap-4 md:grid-cols-2">
             <UCard
-              v-for="index in 3"
+              v-for="index in 5"
               :key="index"
               variant="subtle"
               class="border border-default/50"
@@ -141,20 +132,20 @@ function metricLabel(gameId: GameId): string {
                   </div>
                   <USkeleton class="h-6 w-12 rounded-full" />
                 </div>
-
-                <div class="space-y-3">
-                  <USkeleton v-for="row in 3" :key="row" class="h-12 w-full" />
+                <div class="grid grid-cols-3 gap-3">
+                  <USkeleton v-for="col in 3" :key="col" class="h-16 w-full rounded-lg" />
                 </div>
               </div>
             </UCard>
           </div>
 
+          <!-- Empty state -->
           <UEmpty
             v-else-if="!errorMessage && !hasSessions"
             variant="subtle"
-            icon="i-lucide-history"
+            icon="i-lucide-brain"
             title="No sessions yet"
-            description="Play an active benchmark to see your results here."
+            description="Complete a benchmark to see your cognitive profile here."
             :actions="[
               {
                 label: 'Start playing',
@@ -164,12 +155,15 @@ function metricLabel(gameId: GameId): string {
             ]"
           />
 
+          <!-- Game stat cards -->
           <div v-else class="grid gap-4 md:grid-cols-2">
             <UCard
-              v-for="history in histories"
-              :key="history.gameCode"
+              v-for="entry in entries"
+              :key="entry.gameCode"
               variant="subtle"
-              class="border border-default/50"
+              class="border border-default/50 transition-colors"
+              :class="{ 'cursor-pointer hover:border-secondary/40': entry.stats }"
+              @click="openDetail(entry)"
             >
               <template #header>
                 <div class="flex items-start justify-between gap-3">
@@ -177,57 +171,148 @@ function metricLabel(gameId: GameId): string {
                     <div
                       class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-secondary/30 bg-secondary/10"
                     >
-                      <UIcon :name="history.module.icon" class="h-5 w-5 text-secondary" />
+                      <UIcon :name="entry.module.icon" class="h-5 w-5 text-secondary" />
                     </div>
                     <div class="min-w-0">
                       <h3 class="truncate text-base font-semibold text-highlighted">
-                        {{ history.module.name }}
+                        {{ entry.module.name }}
                       </h3>
                       <p class="text-xs text-toned">
-                        {{ history.sessions.length }} recent sessions
+                        {{ metricLabel(entry.module.id) }}
+                        <span class="text-muted"
+                          >&middot; {{ directionHint(entry.module.id) }}</span
+                        >
                       </p>
                     </div>
                   </div>
 
                   <UBadge color="secondary" variant="soft" size="sm">
-                    {{ history.module.chcCode }}
+                    {{ entry.module.chcCode }}
                   </UBadge>
                 </div>
               </template>
 
-              <ol v-if="history.sessions.length" class="divide-y divide-default/60">
-                <li
-                  v-for="(gameSession, index) in history.sessions"
-                  :key="`${history.gameCode}-${gameSession.completed_at}-${index}`"
-                  class="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-                >
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-medium text-highlighted">
-                      {{ formatCompletedAt(gameSession.completed_at) }}
+              <!-- Stats grid: Best / Avg / Recent -->
+              <div v-if="entry.stats" class="space-y-4">
+                <div class="grid grid-cols-3 gap-3">
+                  <div
+                    class="rounded-lg border border-default/40 bg-elevated/50 px-3 py-2.5 text-center"
+                  >
+                    <p class="text-xs font-medium text-muted">Best</p>
+                    <p class="mt-1 text-base font-semibold text-highlighted">
+                      {{ formatMetric(entry.stats.best_metric, entry.module.id) }}
                     </p>
                   </div>
-
-                  <div class="shrink-0 text-right">
-                    <p class="text-sm font-semibold text-highlighted">
-                      {{ formatMetric(gameSession.metric_value, history.module.id) }}
+                  <div
+                    class="rounded-lg border border-default/40 bg-elevated/50 px-3 py-2.5 text-center"
+                  >
+                    <p class="text-xs font-medium text-muted">Avg</p>
+                    <p class="mt-1 text-base font-semibold text-highlighted">
+                      {{ formatMetric(entry.stats.avg_metric, entry.module.id) }}
                     </p>
-                    <p class="text-xs text-muted">{{ metricLabel(history.module.id) }}</p>
                   </div>
-                </li>
-              </ol>
+                  <div
+                    class="rounded-lg border border-default/40 bg-elevated/50 px-3 py-2.5 text-center"
+                  >
+                    <p class="text-xs font-medium text-muted">Recent</p>
+                    <p class="mt-1 text-base font-semibold text-highlighted">
+                      {{ formatMetric(entry.stats.latest_metric, entry.module.id) }}
+                    </p>
+                  </div>
+                </div>
 
-              <UEmpty
-                v-else
-                variant="naked"
-                size="sm"
-                icon="i-lucide-history"
-                title="No sessions"
-                description="Results appear after your first completed run."
-              />
+                <p class="text-xs text-muted">
+                  {{ entry.stats.session_count }} completed session{{
+                    entry.stats.session_count === 1 ? '' : 's'
+                  }}
+                </p>
+              </div>
+
+              <!-- No sessions for this game -->
+              <div v-else class="py-2 text-center">
+                <p class="text-sm text-muted">No sessions yet</p>
+                <UButton size="xs" variant="link" color="secondary" to="/play" class="mt-1">
+                  Play now
+                </UButton>
+              </div>
             </UCard>
           </div>
         </section>
       </div>
     </main>
+
+    <!-- Detail Modal -->
+    <UModal v-model:open="modalOpen">
+      <template #content>
+        <div v-if="activeEntry" class="p-6 space-y-5">
+          <!-- Modal header -->
+          <div class="flex items-center gap-3">
+            <div
+              class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-secondary/30 bg-secondary/10"
+            >
+              <UIcon :name="activeEntry.module.icon" class="h-5 w-5 text-secondary" />
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-highlighted">
+                {{ activeEntry.module.name }}
+              </h3>
+              <p class="text-xs text-toned">
+                {{ metricLabel(activeEntry.module.id) }}
+                <span class="text-muted">&middot; {{ directionHint(activeEntry.module.id) }}</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Stats summary in modal -->
+          <div v-if="activeEntry.stats" class="grid grid-cols-3 gap-3">
+            <div class="rounded-lg border border-default/40 bg-elevated/50 px-3 py-2.5 text-center">
+              <p class="text-xs font-medium text-muted">Best</p>
+              <p class="mt-1 text-base font-semibold text-highlighted">
+                {{ formatMetric(activeEntry.stats.best_metric, activeEntry.module.id) }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-default/40 bg-elevated/50 px-3 py-2.5 text-center">
+              <p class="text-xs font-medium text-muted">Avg</p>
+              <p class="mt-1 text-base font-semibold text-highlighted">
+                {{ formatMetric(activeEntry.stats.avg_metric, activeEntry.module.id) }}
+              </p>
+            </div>
+            <div class="rounded-lg border border-default/40 bg-elevated/50 px-3 py-2.5 text-center">
+              <p class="text-xs font-medium text-muted">Recent</p>
+              <p class="mt-1 text-base font-semibold text-highlighted">
+                {{ formatMetric(activeEntry.stats.latest_metric, activeEntry.module.id) }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Recent runs list -->
+          <div class="space-y-2">
+            <p class="text-xs font-medium text-muted uppercase tracking-wide">Recent Runs</p>
+
+            <div v-if="recentLoading[activeEntry.gameCode]" class="space-y-2">
+              <USkeleton v-for="i in 5" :key="i" class="h-9 w-full" />
+            </div>
+
+            <ul
+              v-else-if="recentSessions[activeEntry.gameCode]?.length"
+              class="divide-y divide-default/40"
+            >
+              <li
+                v-for="(run, idx) in recentSessions[activeEntry.gameCode]"
+                :key="idx"
+                class="flex items-center justify-between py-2.5 first:pt-0 last:pb-0"
+              >
+                <span class="text-sm text-toned">{{ formatDate(run.completed_at) }}</span>
+                <span class="text-sm font-medium text-highlighted">
+                  {{ formatMetric(run.metric_value, activeEntry.module.id) }}
+                </span>
+              </li>
+            </ul>
+
+            <p v-else class="text-sm text-muted">No run data available.</p>
+          </div>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
