@@ -161,9 +161,17 @@ async function openDetail(entry: ProfileGameEntry) {
               v-for="entry in entries"
               :key="entry.gameCode"
               variant="subtle"
+              :tabindex="entry.stats ? 0 : undefined"
+              :role="entry.stats ? 'button' : undefined"
+              :aria-label="entry.stats ? `View ${entry.module.name} details` : undefined"
               class="border border-default/50 transition-colors"
-              :class="{ 'cursor-pointer hover:border-secondary/40': entry.stats }"
+              :class="{
+                'cursor-pointer hover:border-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/40':
+                  entry.stats,
+              }"
               @click="openDetail(entry)"
+              @keydown.enter.prevent="openDetail(entry)"
+              @keydown.space.prevent="openDetail(entry)"
             >
               <template #header>
                 <div class="flex items-start justify-between gap-3">
@@ -298,8 +306,8 @@ async function openDetail(entry: ProfileGameEntry) {
               class="divide-y divide-default/40"
             >
               <li
-                v-for="(run, idx) in recentSessions[activeEntry.gameCode]"
-                :key="idx"
+                v-for="run in recentSessions[activeEntry.gameCode]"
+                :key="`${run.completed_at}-${run.metric_value}`"
                 class="flex items-center justify-between py-2.5 first:pt-0 last:pb-0"
               >
                 <span class="text-sm text-toned">{{ formatDate(run.completed_at) }}</span>
