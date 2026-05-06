@@ -21,9 +21,13 @@ function isPlayerGameStats(value: unknown): value is PlayerGameStats {
   return (
     typeof value.game_code === 'string' &&
     typeof value.latest_metric === 'number' &&
+    Number.isFinite(value.latest_metric) &&
     typeof value.best_metric === 'number' &&
+    Number.isFinite(value.best_metric) &&
     typeof value.avg_metric === 'number' &&
-    typeof value.session_count === 'number'
+    Number.isFinite(value.avg_metric) &&
+    typeof value.session_count === 'number' &&
+    Number.isInteger(value.session_count)
   )
 }
 
