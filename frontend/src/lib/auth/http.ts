@@ -78,6 +78,20 @@ function hasAuthorizationHeader(init: RequestInit): boolean {
   return new Headers(init.headers).has('Authorization')
 }
 
+function notifyUnauthorized(): void {
+  if (!unauthorizedHandler) {
+    return
+  }
+
+  try {
+    void Promise.resolve(unauthorizedHandler()).catch(() => {
+      // The request still throws ApiError below; avoid surfacing handler failures as unhandled rejections.
+    })
+  } catch {
+    // Keep HTTP error propagation deterministic even if the app-level handler fails synchronously.
+  }
+}
+
 export async function request<T>(
   path: string,
   init: RequestInit,
@@ -98,7 +112,7 @@ export async function request<T>(
 
   if (!response.ok) {
     if (response.status === 401 && hasAuthorizationHeader(init)) {
-      void unauthorizedHandler?.()
+      notifyUnauthorized()
     }
 
     const fallback = rawBody || `Request failed with status ${response.status}`

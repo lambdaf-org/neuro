@@ -104,9 +104,9 @@ defineProps<{
             >
               Select
             </UButton>
-            <UButton size="xs" color="neutral" variant="outline" @click="startGroupEdit(group)"
-              >Edit</UButton
-            >
+            <UButton size="xs" color="neutral" variant="outline" @click="startGroupEdit(group)">
+              Edit
+            </UButton>
             <UButton
               size="xs"
               color="error"
