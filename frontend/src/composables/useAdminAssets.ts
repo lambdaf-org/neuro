@@ -1,5 +1,4 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
 import { ApiError } from '@/lib/auth'
@@ -16,7 +15,7 @@ import {
   type GameAsset,
 } from '@/lib/admin/assets'
 import { useAuthStore } from '@/stores/auth'
-import { getErrorMessage, isUnauthorizedError } from '@/lib/utils/errorHandling'
+import { getErrorMessage } from '@/lib/utils/errorHandling'
 import { isValidHttpUrl } from '@/lib/utils/validation'
 
 export interface GroupFormState {
@@ -31,7 +30,6 @@ export interface AssetFormState {
 }
 
 export function useAdminAssets() {
-  const router = useRouter()
   const auth = useAuthStore()
 
   const groups = ref<AssetGroup[]>([])
@@ -67,16 +65,6 @@ export function useAdminAssets() {
   const selectedGroup = computed(
     () => groups.value.find((group) => group.id === selectedGroupId.value) ?? null,
   )
-
-  function handleAuthError(error: unknown): void {
-    if (isUnauthorizedError(error)) {
-      auth.logout()
-      void router.push({
-        path: '/login',
-        query: { redirect: '/admin/assets', sessionExpired: '1' },
-      })
-    }
-  }
 
   function getAccessTokenOrThrow(): string {
     const accessToken = auth.accessToken
@@ -153,7 +141,6 @@ export function useAdminAssets() {
         selectedGroupId.value = loadedGroups[0]?.id ?? null
       }
     } catch (error) {
-      handleAuthError(error)
       groups.value = []
       selectedGroupId.value = null
       assets.value = []
@@ -181,7 +168,6 @@ export function useAdminAssets() {
         assets.value = loadedAssets
       }
     } catch (error) {
-      handleAuthError(error)
       if (currentFetchId === assetFetchId) {
         assets.value = []
         assetErrorMessage.value = getErrorMessage(error, 'Failed to load game assets.')
@@ -236,7 +222,6 @@ export function useAdminAssets() {
 
       resetGroupForm()
     } catch (error) {
-      handleAuthError(error)
       groupErrorMessage.value = getErrorMessage(error, 'Saving asset group failed.')
     } finally {
       isGroupSubmitting.value = false
@@ -255,7 +240,6 @@ export function useAdminAssets() {
       await deleteAssetGroup(group.id, getAccessTokenOrThrow())
       await refreshGroups()
     } catch (error) {
-      handleAuthError(error)
       groupErrorMessage.value = getErrorMessage(error, 'Deleting asset group failed.')
     } finally {
       deletingGroupId.value = null
@@ -314,7 +298,6 @@ export function useAdminAssets() {
       await refreshAssets()
       resetAssetForm()
     } catch (error) {
-      handleAuthError(error)
       assetErrorMessage.value = getErrorMessage(error, 'Saving game asset failed.')
     } finally {
       isAssetSubmitting.value = false
@@ -333,7 +316,6 @@ export function useAdminAssets() {
       await deleteGameAsset(asset.id, getAccessTokenOrThrow())
       await refreshAssets()
     } catch (error) {
-      handleAuthError(error)
       assetErrorMessage.value = getErrorMessage(error, 'Deleting game asset failed.')
     } finally {
       deletingAssetId.value = null

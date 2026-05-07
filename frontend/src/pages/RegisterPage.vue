@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
+import AppErrorState from '@/components/ui/AppErrorState.vue'
 import { ApiError, register } from '@/lib/auth'
 
 interface RegisterFormState {
@@ -110,10 +111,8 @@ async function onSubmit(event: FormSubmitEvent<RegisterFormState>) {
       </template>
 
       <div class="space-y-4">
-        <UAlert
+        <AppErrorState
           v-if="errorMessage"
-          color="error"
-          variant="soft"
           title="Registration failed"
           :description="errorMessage"
         />

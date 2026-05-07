@@ -3,6 +3,9 @@ import { computed, defineAsyncComponent } from 'vue'
 import { useRoute } from 'vue-router'
 
 import ProtectedNav from '@/components/ProtectedNav.vue'
+import AppEmptyState from '@/components/ui/AppEmptyState.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
+import AppLoadingState from '@/components/ui/AppLoadingState.vue'
 import { useGameMetadata } from '@/composables/useGameMetadata'
 import type { GameId } from '@/lib/play/modules'
 import { findPlayModuleById } from '@/lib/play/modules'
@@ -72,23 +75,21 @@ const pageTitle = computed(() => metadata.value?.display_name || selectedModule.
         </div>
 
         <!-- Module not found -->
-        <UAlert
+        <AppErrorState
           v-if="!selectedModule"
-          color="error"
-          variant="soft"
           title="Module not found"
           :description="`No module registered for '${gameId}'.`"
         />
 
-        <UAlert
+        <AppErrorState
           v-if="selectedModule && metadataError"
           color="warning"
-          variant="soft"
+          icon="i-lucide-info"
           title="Game details unavailable"
           :description="metadataError"
         />
 
-        <USkeleton v-if="selectedModule && isMetadataLoading" class="h-96 w-full rounded-xl" />
+        <AppLoadingState v-if="selectedModule && isMetadataLoading" />
 
         <!-- Registered game component -->
         <component
@@ -99,17 +100,12 @@ const pageTitle = computed(() => metadata.value?.display_name || selectedModule.
         />
 
         <!-- Module exists but no component registered yet -->
-        <div
-          v-else-if="comingSoonModule"
-          class="flex min-h-72 flex-col items-center justify-center gap-3 rounded-xl border border-default/50 bg-elevated/30 p-10 text-center backdrop-blur-sm"
-        >
-          <div
-            class="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-secondary/30 bg-secondary/10"
-          >
-            <UIcon :name="comingSoonModule.icon" class="h-6 w-6 text-secondary" />
-          </div>
-          <p class="font-semibold text-highlighted">{{ comingSoonModule.name }}</p>
-          <p class="text-sm text-toned">This module is coming soon.</p>
+        <div v-else-if="comingSoonModule" class="min-h-72">
+          <AppEmptyState
+            :icon="comingSoonModule.icon"
+            :title="comingSoonModule.name"
+            description="This module is coming soon."
+          />
         </div>
       </div>
     </main>
