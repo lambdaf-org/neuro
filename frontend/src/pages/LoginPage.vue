@@ -3,6 +3,7 @@ import { reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
+import AppErrorState from '@/components/ui/AppErrorState.vue'
 import { resolveAuthRedirect } from '@/lib/auth/navigation'
 import { ApiError, login } from '@/lib/auth'
 import { useAuthStore } from '@/stores/auth'
@@ -115,10 +116,8 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
       </template>
 
       <div class="space-y-4">
-        <UAlert
+        <AppErrorState
           v-if="errorMessage"
-          color="error"
-          variant="soft"
           title="Authentication failed"
           :description="errorMessage"
         />

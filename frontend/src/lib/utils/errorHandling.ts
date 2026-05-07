@@ -10,11 +10,3 @@ export function getErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback
 }
-
-/**
- * Checks if an error is a 401 Unauthorized error.
- * Used to detect expired sessions.
- */
-export function isUnauthorizedError(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 401
-}
