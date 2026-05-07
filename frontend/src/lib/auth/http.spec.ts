@@ -54,4 +54,28 @@ describe('request', () => {
 
     expect(onUnauthorized).not.toHaveBeenCalled()
   })
+
+  it('still throws the ApiError when the unauthorized handler rejects', async () => {
+    setUnauthorizedHandler(vi.fn().mockRejectedValue(new Error('Navigation failed')))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ message: 'JWT expired' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    )
+
+    await expect(
+      request(
+        '/api/game/stats',
+        {
+          method: 'GET',
+          headers: { Authorization: 'Bearer expired-token' },
+        },
+        parseJsonBody,
+      ),
+    ).rejects.toThrow(ApiError)
+  })
 })

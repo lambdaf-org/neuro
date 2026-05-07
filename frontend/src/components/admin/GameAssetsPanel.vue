@@ -148,9 +148,9 @@ defineProps<{
             </div>
 
             <div class="flex flex-wrap gap-2">
-              <UButton size="xs" color="neutral" variant="outline" @click="startAssetEdit(asset)"
-                >Edit</UButton
-              >
+              <UButton size="xs" color="neutral" variant="outline" @click="startAssetEdit(asset)">
+                Edit
+              </UButton>
               <UButton
                 size="xs"
                 color="error"

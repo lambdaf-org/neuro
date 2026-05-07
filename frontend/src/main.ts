@@ -30,15 +30,22 @@ setUnauthorizedHandler(() => {
 
   auth.logout()
 
-  if (currentRoute.name !== 'login') {
-    void router.replace({
+  if (currentRoute.name === 'login') {
+    isHandlingUnauthorized = false
+    return
+  }
+
+  void router
+    .replace({
       name: 'login',
       query: {
         redirect: currentRoute.fullPath,
         sessionExpired: '1',
       },
     })
-  }
+    .finally(() => {
+      isHandlingUnauthorized = false
+    })
 })
 
 app.mount('#app')
