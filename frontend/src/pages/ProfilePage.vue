@@ -2,13 +2,16 @@
 import { reactive, ref } from 'vue'
 
 import ProtectedNav from '@/components/ProtectedNav.vue'
+import AppEmptyState from '@/components/ui/AppEmptyState.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
+import AppLoadingState from '@/components/ui/AppLoadingState.vue'
 import { useProfileHistory, type ProfileGameEntry } from '@/composables/useProfileHistory'
 import { getRecentGameSessions, type RecentGameSession } from '@/lib/play/history'
 import type { GameId } from '@/lib/play/modules'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
-const { entries, isLoading, errorMessage, hasSessions } = useProfileHistory()
+const { entries, isLoading, errorMessage, hasSessions, reload } = useProfileHistory()
 
 const modalOpen = ref(false)
 const activeEntry = ref<ProfileGameEntry | null>(null)
@@ -104,45 +107,20 @@ async function openDetail(entry: ProfileGameEntry) {
           </div>
 
           <!-- Error -->
-          <UAlert
+          <AppErrorState
             v-if="errorMessage"
-            color="error"
-            variant="soft"
-            icon="i-lucide-circle-alert"
             title="Stats unavailable"
             :description="errorMessage"
+            retry-label="Retry"
+            @retry="reload"
           />
 
           <!-- Loading skeletons -->
-          <div v-if="isLoading" class="grid gap-4 md:grid-cols-2">
-            <UCard
-              v-for="index in 5"
-              :key="index"
-              variant="subtle"
-              class="border border-default/50"
-            >
-              <div class="space-y-5">
-                <div class="flex items-center justify-between gap-3">
-                  <div class="flex items-center gap-3">
-                    <USkeleton class="h-10 w-10 rounded-lg" />
-                    <div class="space-y-2">
-                      <USkeleton class="h-4 w-32" />
-                      <USkeleton class="h-3 w-20" />
-                    </div>
-                  </div>
-                  <USkeleton class="h-6 w-12 rounded-full" />
-                </div>
-                <div class="grid grid-cols-3 gap-3">
-                  <USkeleton v-for="col in 3" :key="col" class="h-16 w-full rounded-lg" />
-                </div>
-              </div>
-            </UCard>
-          </div>
+          <AppLoadingState v-if="isLoading" variant="cards" :count="5" />
 
           <!-- Empty state -->
-          <UEmpty
+          <AppEmptyState
             v-else-if="!errorMessage && !hasSessions"
-            variant="subtle"
             icon="i-lucide-brain"
             title="No sessions yet"
             description="Complete a benchmark to see your cognitive profile here."
@@ -156,7 +134,7 @@ async function openDetail(entry: ProfileGameEntry) {
           />
 
           <!-- Game stat cards -->
-          <div v-else class="grid gap-4 md:grid-cols-2">
+          <div v-else-if="!errorMessage" class="grid gap-4 md:grid-cols-2">
             <UCard
               v-for="entry in entries"
               :key="entry.gameCode"
@@ -297,9 +275,7 @@ async function openDetail(entry: ProfileGameEntry) {
           <div class="space-y-2">
             <p class="text-xs font-medium text-muted uppercase tracking-wide">Recent Runs</p>
 
-            <div v-if="recentLoading[activeEntry.gameCode]" class="space-y-2">
-              <USkeleton v-for="i in 5" :key="i" class="h-9 w-full" />
-            </div>
+            <AppLoadingState v-if="recentLoading[activeEntry.gameCode]" variant="list" :count="5" />
 
             <ul
               v-else-if="recentSessions[activeEntry.gameCode]?.length"

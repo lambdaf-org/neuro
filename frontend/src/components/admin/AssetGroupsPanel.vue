@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
+import AppEmptyState from '@/components/ui/AppEmptyState.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
+import AppLoadingState from '@/components/ui/AppLoadingState.vue'
 import type { AssetGroup } from '@/lib/admin/assets'
 import type { GroupFormState } from '@/composables/useAdminAssets'
 
@@ -33,15 +36,20 @@ defineProps<{
       </UButton>
     </div>
 
-    <UAlert
+    <AppErrorState
       v-if="groupErrorMessage"
-      color="error"
-      variant="soft"
       title="Group operation failed"
       :description="groupErrorMessage"
+      retry-label="Reload"
+      @retry="refreshGroups"
     />
 
-    <UForm :state="groupFormState" :validate="validateGroupForm" class="space-y-3" @submit="onGroupSubmit">
+    <UForm
+      :state="groupFormState"
+      :validate="validateGroupForm"
+      class="space-y-3"
+      @submit="onGroupSubmit"
+    >
       <UFormField name="gameCode" label="Game Code" required>
         <UInput v-model="groupFormState.gameCode" placeholder="gv" class="w-full" />
       </UFormField>
@@ -67,17 +75,11 @@ defineProps<{
     </UForm>
 
     <div class="space-y-2">
-      <UAlert
-        v-if="isGroupsLoading && groups.length === 0"
-        color="neutral"
-        variant="soft"
-        title="Loading groups..."
-      />
+      <AppLoadingState v-if="isGroupsLoading && groups.length === 0" variant="list" :count="4" />
 
-      <UAlert
+      <AppEmptyState
         v-else-if="groups.length === 0"
-        color="neutral"
-        variant="soft"
+        icon="i-lucide-folder-open"
         title="No groups available"
         description="Create your first asset group."
       />
@@ -102,7 +104,9 @@ defineProps<{
             >
               Select
             </UButton>
-            <UButton size="xs" color="neutral" variant="outline" @click="startGroupEdit(group)">Edit</UButton>
+            <UButton size="xs" color="neutral" variant="outline" @click="startGroupEdit(group)">
+              Edit
+            </UButton>
             <UButton
               size="xs"
               color="error"
