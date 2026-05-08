@@ -1,5 +1,9 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/backend').replace(/\/$/, '')
 
+type UnauthorizedHandler = () => void | Promise<void>
+
+let unauthorizedHandler: UnauthorizedHandler | null = null
+
 export class ApiError extends Error {
   status: number
   cause?: unknown
@@ -10,6 +14,10 @@ export class ApiError extends Error {
     this.status = status
     this.cause = cause
   }
+}
+
+export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): void {
+  unauthorizedHandler = handler
 }
 
 type ParseJsonResult = {
@@ -66,6 +74,24 @@ function buildHeaders(init: RequestInit): HeadersInit {
   return headers
 }
 
+function hasAuthorizationHeader(init: RequestInit): boolean {
+  return new Headers(init.headers).has('Authorization')
+}
+
+function notifyUnauthorized(): void {
+  if (!unauthorizedHandler) {
+    return
+  }
+
+  try {
+    void Promise.resolve(unauthorizedHandler()).catch(() => {
+      // The request still throws ApiError below; avoid surfacing handler failures as unhandled rejections.
+    })
+  } catch {
+    // Keep HTTP error propagation deterministic even if the app-level handler fails synchronously.
+  }
+}
+
 export async function request<T>(
   path: string,
   init: RequestInit,
@@ -85,6 +111,10 @@ export async function request<T>(
   const rawBody = await response.text()
 
   if (!response.ok) {
+    if (response.status === 401 && hasAuthorizationHeader(init)) {
+      notifyUnauthorized()
+    }
+
     const fallback = rawBody || `Request failed with status ${response.status}`
     throw new ApiError(parseErrorMessage(rawBody, fallback), response.status)
   }
