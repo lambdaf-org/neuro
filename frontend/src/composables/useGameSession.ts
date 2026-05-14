@@ -35,11 +35,12 @@ function parseAnticheatFrame(raw: string): AnticheatVerdictFrame | null {
   const action = parsed.action
   if (action !== 'flag' && action !== 'ban') return null
 
-  const flagsContainer =
-    parsed.flags && typeof parsed.flags === 'object'
-      ? (parsed.flags as { flags?: unknown }).flags
-      : undefined
-  const flagsArray = Array.isArray(flagsContainer) ? flagsContainer : []
+  const flagsSource = parsed.flags
+  const flagsArray = Array.isArray(flagsSource)
+    ? flagsSource
+    : flagsSource && typeof flagsSource === 'object' && Array.isArray((flagsSource as { flags?: unknown }).flags)
+      ? (flagsSource as { flags: unknown[] }).flags
+      : []
   const flags = flagsArray
     .filter((f): f is { code: unknown; reason: unknown } => typeof f === 'object' && f !== null)
     .map((f) => ({
