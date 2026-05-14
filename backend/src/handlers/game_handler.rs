@@ -20,6 +20,7 @@ use crate::models::validate::Validate;
 use crate::repositories::anticheat_repository;
 use crate::repositories::game_repository;
 use crate::services::anticheat;
+use crate::services::anticheat::EventTuple;
 use crate::services::anticheat_runtime;
 use crate::services::scoring::{SCORING_VERSION, ScoreOutcome, score_game};
 use crate::services::scoring_input::{self, TrialResolutionError};
@@ -380,6 +381,7 @@ pub async fn stream_game_events(
     let game_code = session.game_code.clone();
 
     actix_web::rt::spawn(async move {
+        let mut history: Vec<EventTuple> = Vec::new();
         while let Some(item) = msg_stream.next().await {
             let message = match item {
                 Ok(message) => message,
@@ -397,6 +399,7 @@ pub async fn stream_game_events(
                 session_id,
                 user_id,
                 &game_code,
+                &mut history,
             )
             .await;
 
@@ -416,11 +419,14 @@ async fn handle_game_event_ws_message(
     session_id: Uuid,
     user_id: Uuid,
     game_code: &str,
+    history: &mut Vec<EventTuple>,
 ) -> bool {
     match message {
         actix_ws::Message::Text(text) => {
-            handle_game_event_ws_text(ws_session, state, session_id, user_id, game_code, &text)
-                .await
+            handle_game_event_ws_text(
+                ws_session, state, session_id, user_id, game_code, history, &text,
+            )
+            .await
         }
         actix_ws::Message::Ping(bytes) => {
             let _ = ws_session.pong(&bytes).await;
@@ -444,6 +450,7 @@ async fn handle_game_event_ws_text(
     session_id: Uuid,
     user_id: Uuid,
     game_code: &str,
+    history: &mut Vec<EventTuple>,
     text: &str,
 ) -> bool {
     let event = match parse_game_event_ws_payload(text) {
@@ -451,16 +458,6 @@ async fn handle_game_event_ws_text(
         Err(error) => {
             send_game_event_ws_error(ws_session, &error).await;
             return true;
-        }
-    };
-
-    let prior_event_ms = match game_repository::get_events_by_session(&state.sb_client, session_id)
-        .await
-    {
-        Ok(events) => events.into_iter().map(|e| e.event_value).collect::<Vec<_>>(),
-        Err(error) => {
-            log::error!("failed loading prior events for anticheat: {error}");
-            Vec::new()
         }
     };
 
@@ -472,7 +469,9 @@ async fn handle_game_event_ws_text(
         }
     }
 
-    let verdict = anticheat::evaluate_round(game_code, &prior_event_ms, event.event_value);
+    let new_event: EventTuple = (event.event_value, event.correct);
+    let verdict = anticheat::evaluate_round(game_code, history, new_event);
+    history.push(new_event);
 
     if verdict.flags.is_empty() {
         return true;
