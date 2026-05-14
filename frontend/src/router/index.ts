@@ -38,10 +38,21 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/leaderboard',
+    name: 'leaderboard',
+    component: () => import('@/pages/LeaderboardPage.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/admin/assets',
     name: 'admin-assets',
     component: () => import('@/pages/AdminAssetsPage.vue'),
     meta: { requiresAuth: true, requiresAdminUi: true },
+  },
+  {
+    path: '/banned',
+    name: 'banned',
+    component: () => import('@/pages/BannedPage.vue'),
   },
   {
     path: '/:pathMatch(.*)*',

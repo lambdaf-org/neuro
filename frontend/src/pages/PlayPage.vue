@@ -16,8 +16,7 @@ import { PLAY_MODULES } from '@/lib/play/modules'
           </p>
           <h1 class="text-2xl font-semibold text-highlighted sm:text-3xl">Cognitive Modules</h1>
           <p class="max-w-2xl text-sm leading-6 text-toned sm:text-base">
-            Select a CHC-based benchmark and run the task in a consistent, distraction-light game
-            surface.
+            Select a CHC-based benchmark.
           </p>
         </header>
 

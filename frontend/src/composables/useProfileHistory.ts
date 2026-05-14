@@ -1,50 +1,50 @@
 import { computed, ref } from 'vue'
 
 import { ApiError } from '@/lib/auth'
-import { getRecentGameSessions, type RecentGameSession } from '@/lib/play/history'
+import { getPlayerStats, type PlayerGameStats } from '@/lib/play/stats'
 import { PLAY_MODULES, type GameId, type PlayModule } from '@/lib/play/modules'
 import { getErrorMessage } from '@/lib/utils/errorHandling'
 import { useAuthStore } from '@/stores/auth'
 
-const PROFILE_HISTORY_GAME_IDS = new Set<GameId>([
+const PROFILE_GAME_IDS = new Set<GameId>([
   'reaction-time',
-  'processing-speed',
-  'fluid-intelligence',
+  'symbol-matching',
+  'pattern-logic',
+  'sequence-memory',
+  'mental-rotation',
 ])
 
-const PROFILE_HISTORY_MODULES = PLAY_MODULES.filter((module) =>
-  PROFILE_HISTORY_GAME_IDS.has(module.id),
-)
-
-export interface ProfileGameHistory {
-  module: PlayModule
-  gameCode: string
-  sessions: RecentGameSession[]
-}
+const PROFILE_MODULES = PLAY_MODULES.filter((module) => PROFILE_GAME_IDS.has(module.id))
 
 function toBackendGameCode(module: PlayModule): string {
   return module.chcCode.toLowerCase()
 }
 
-function createEmptyHistory(): ProfileGameHistory[] {
-  return PROFILE_HISTORY_MODULES.map((module) => ({
+export interface ProfileGameEntry {
+  module: PlayModule
+  gameCode: string
+  stats: PlayerGameStats | null
+}
+
+function createEmptyEntries(): ProfileGameEntry[] {
+  return PROFILE_MODULES.map((module) => ({
     module,
     gameCode: toBackendGameCode(module),
-    sessions: [],
+    stats: null,
   }))
 }
 
 export function useProfileHistory() {
   const auth = useAuthStore()
 
-  const histories = ref<ProfileGameHistory[]>(createEmptyHistory())
+  const entries = ref<ProfileGameEntry[]>(createEmptyEntries())
   const isLoading = ref(false)
   const errorMessage = ref('')
 
   let requestVersion = 0
 
   const totalSessionCount = computed(() =>
-    histories.value.reduce((count, history) => count + history.sessions.length, 0),
+    entries.value.reduce((sum, entry) => sum + (entry.stats?.session_count ?? 0), 0),
   )
   const hasSessions = computed(() => totalSessionCount.value > 0)
 
@@ -56,7 +56,7 @@ export function useProfileHistory() {
     return token
   }
 
-  async function loadHistory(): Promise<void> {
+  async function loadStats(): Promise<void> {
     const version = ++requestVersion
 
     isLoading.value = true
@@ -64,25 +64,24 @@ export function useProfileHistory() {
 
     try {
       const accessToken = getAccessTokenOrThrow()
-      const nextHistories = await Promise.all(
-        PROFILE_HISTORY_MODULES.map(async (module) => {
-          const gameCode = toBackendGameCode(module)
-
-          return {
-            module,
-            gameCode,
-            sessions: await getRecentGameSessions(gameCode, accessToken),
-          }
-        }),
-      )
+      const allStats = await getPlayerStats(accessToken)
 
       if (version !== requestVersion) return
 
-      histories.value = nextHistories
+      const statsByCode = new Map(allStats.map((s) => [s.game_code, s]))
+
+      entries.value = PROFILE_MODULES.map((module) => {
+        const gameCode = toBackendGameCode(module)
+        return {
+          module,
+          gameCode,
+          stats: statsByCode.get(gameCode) ?? null,
+        }
+      })
     } catch (error) {
       if (version !== requestVersion) return
 
-      errorMessage.value = getErrorMessage(error, 'Could not load profile history.')
+      errorMessage.value = getErrorMessage(error, 'Could not load profile stats.')
     } finally {
       if (version === requestVersion) {
         isLoading.value = false
@@ -90,14 +89,14 @@ export function useProfileHistory() {
     }
   }
 
-  void loadHistory()
+  void loadStats()
 
   return {
-    histories,
+    entries,
     isLoading,
     errorMessage,
     totalSessionCount,
     hasSessions,
-    reload: loadHistory,
+    reload: loadStats,
   }
 }

@@ -1,3 +1,4 @@
+pub mod anticheat;
 pub mod app_state;
 pub mod assets;
 pub mod game;

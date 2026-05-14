@@ -10,7 +10,6 @@ const MAX_VALID_REACTION_MS: f64 = 1500.0;
 const MIN_REACTION_TRIALS: usize = 3;
 const MIN_WORKING_MEMORY_SPAN: i32 = 1;
 const MAX_WORKING_MEMORY_SPAN: i32 = 99;
-const MIN_WORKING_MEMORY_TRIALS: usize = 3;
 const MIN_ACCURACY_TRIALS: usize = 5;
 
 pub enum ScoreOutcome {
@@ -79,31 +78,40 @@ impl Scorer for ReactionScorer {
 
 impl Scorer for WorkingMemoryScorer {
     fn score(&self, trials: &[TrialPayload]) -> ScoreOutcome {
-        let valid_spans = trials
+        let valid_trials = trials
             .iter()
-            .filter_map(|trial| trial.span)
-            .filter(|span| (*span >= MIN_WORKING_MEMORY_SPAN) && (*span <= MAX_WORKING_MEMORY_SPAN))
+            .filter_map(|trial| match (trial.span, trial.correct) {
+                (Some(span), Some(correct))
+                    if span >= MIN_WORKING_MEMORY_SPAN && span <= MAX_WORKING_MEMORY_SPAN =>
+                {
+                    Some((span, correct))
+                }
+                _ => None,
+            })
             .collect::<Vec<_>>();
 
-        if valid_spans.len() < MIN_WORKING_MEMORY_TRIALS {
+        if valid_trials.is_empty() {
             return ScoreOutcome::Invalid {
                 reason: "not enough valid trials",
             };
         }
 
-        let max_span = valid_spans
+        let correct_spans = valid_trials
             .iter()
-            .copied()
-            .max()
-            .unwrap_or(MIN_WORKING_MEMORY_SPAN);
-        let invalid_count = trials.len().saturating_sub(valid_spans.len());
+            .filter_map(|(span, correct)| if *correct { Some(*span) } else { None })
+            .collect::<Vec<_>>();
+        let max_span = correct_spans.iter().copied().max().unwrap_or(0);
+        let invalid_count = trials.len().saturating_sub(valid_trials.len());
+        let failed_count = valid_trials.iter().filter(|(_, correct)| !*correct).count();
 
         ScoreOutcome::Valid {
             metric: f64::from(max_span),
             metrics: json!({
-                "n_valid": valid_spans.len() as i64,
-                "n_fail": invalid_count as i64,
-                "retries": invalid_count as i64,
+                "n_valid": valid_trials.len() as i64,
+                "n_correct": correct_spans.len() as i64,
+                "n_fail": failed_count as i64,
+                "n_dropped": invalid_count as i64,
+                "retries": failed_count as i64,
             }),
         }
     }
@@ -187,7 +195,7 @@ impl Scorer for MentalRotationScorer {
     fn score(&self, trials: &[TrialPayload]) -> ScoreOutcome {
         let valid_trials = trials
             .iter()
-            .filter_map(|trial| trial.correct.map(|correct| (correct, trial.magnitude)))
+            .filter_map(|trial| trial.correct.map(|correct| (correct, trial.ms)))
             .collect::<Vec<_>>();
 
         if valid_trials.len() < MIN_ACCURACY_TRIALS {
@@ -196,17 +204,20 @@ impl Scorer for MentalRotationScorer {
             };
         }
 
-        let right_count = valid_trials.iter().filter(|(correct, _)| *correct).count();
-        let misses = valid_trials.len().saturating_sub(right_count);
-        let magnitudes = valid_trials
+        let right_count = valid_trials
             .iter()
-            .filter_map(|(_, magnitude)| *magnitude)
-            .filter(|magnitude| magnitude.is_finite())
+            .filter(|(correct, _)| *correct)
+            .count();
+        let misses = valid_trials.len().saturating_sub(right_count);
+        let response_times = valid_trials
+            .iter()
+            .filter_map(|(_, ms)| *ms)
+            .filter(|ms| ms.is_finite() && *ms >= 0.0)
             .collect::<Vec<_>>();
-        let mean_magnitude = if magnitudes.is_empty() {
+        let mean_rt = if response_times.is_empty() {
             0.0
         } else {
-            magnitudes.iter().sum::<f64>() / magnitudes.len() as f64
+            response_times.iter().sum::<f64>() / response_times.len() as f64
         };
 
         ScoreOutcome::Valid {
@@ -214,7 +225,7 @@ impl Scorer for MentalRotationScorer {
             metrics: json!({
                 "n_trials": valid_trials.len() as i64,
                 "misses": misses as i64,
-                "mean_magnitude": mean_magnitude,
+                "mean_rt": mean_rt,
             }),
         }
     }

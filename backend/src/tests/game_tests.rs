@@ -64,7 +64,7 @@ fn working_memory_scoring_uses_max_valid_span() {
         TrialPayload {
             ms: None,
             span: Some(2),
-            correct: None,
+            correct: Some(true),
             magnitude: None,
             puzzle_id: None,
             selected_option_id: None,
@@ -72,7 +72,7 @@ fn working_memory_scoring_uses_max_valid_span() {
         TrialPayload {
             ms: None,
             span: Some(5),
-            correct: None,
+            correct: Some(true),
             magnitude: None,
             puzzle_id: None,
             selected_option_id: None,
@@ -80,7 +80,7 @@ fn working_memory_scoring_uses_max_valid_span() {
         TrialPayload {
             ms: None,
             span: Some(101),
-            correct: None,
+            correct: Some(true),
             magnitude: None,
             puzzle_id: None,
             selected_option_id: None,
@@ -88,7 +88,7 @@ fn working_memory_scoring_uses_max_valid_span() {
         TrialPayload {
             ms: None,
             span: Some(4),
-            correct: None,
+            correct: Some(true),
             magnitude: None,
             puzzle_id: None,
             selected_option_id: None,
@@ -99,6 +99,75 @@ fn working_memory_scoring_uses_max_valid_span() {
         ScoreOutcome::Valid { metric, metrics } => {
             assert_eq!(metric, 5.0);
             assert_eq!(integer_metric_field(&metrics, "n_valid"), 3);
+            assert_eq!(integer_metric_field(&metrics, "n_correct"), 3);
+            assert_eq!(integer_metric_field(&metrics, "n_fail"), 0);
+            assert_eq!(integer_metric_field(&metrics, "n_dropped"), 1);
+        }
+        ScoreOutcome::Invalid { reason } => panic!("unexpected invalid score: {reason}"),
+    }
+}
+
+#[test]
+fn working_memory_scoring_rejects_missing_correctness() {
+    let trials = vec![
+        TrialPayload {
+            ms: None,
+            span: Some(2),
+            correct: None,
+            magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
+        },
+        TrialPayload {
+            ms: None,
+            span: Some(3),
+            correct: None,
+            magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
+        },
+    ];
+
+    match score_game("gwm", &trials) {
+        ScoreOutcome::Invalid { reason } => assert_eq!(reason, "not enough valid trials"),
+        ScoreOutcome::Valid { .. } => panic!("unexpected valid score without correctness"),
+    }
+}
+
+#[test]
+fn working_memory_scoring_does_not_count_failed_span() {
+    let trials = vec![
+        TrialPayload {
+            ms: Some(1200.0),
+            span: Some(2),
+            correct: Some(true),
+            magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
+        },
+        TrialPayload {
+            ms: Some(1800.0),
+            span: Some(3),
+            correct: Some(true),
+            magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
+        },
+        TrialPayload {
+            ms: Some(2100.0),
+            span: Some(4),
+            correct: Some(false),
+            magnitude: None,
+            puzzle_id: None,
+            selected_option_id: None,
+        },
+    ];
+
+    match score_game("gwm", &trials) {
+        ScoreOutcome::Valid { metric, metrics } => {
+            assert_eq!(metric, 3.0);
+            assert_eq!(integer_metric_field(&metrics, "n_valid"), 3);
+            assert_eq!(integer_metric_field(&metrics, "n_correct"), 2);
             assert_eq!(integer_metric_field(&metrics, "n_fail"), 1);
         }
         ScoreOutcome::Invalid { reason } => panic!("unexpected invalid score: {reason}"),
@@ -218,10 +287,10 @@ fn pattern_logic_scoring_uses_accuracy() {
 }
 
 #[test]
-fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
+fn mental_rotation_scoring_uses_accuracy_and_response_time() {
     let trials = vec![
         TrialPayload {
-            ms: None,
+            ms: Some(900.0),
             span: None,
             correct: Some(true),
             magnitude: Some(45.0),
@@ -229,7 +298,7 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(1100.0),
             span: None,
             correct: Some(false),
             magnitude: Some(90.0),
@@ -237,7 +306,7 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(1300.0),
             span: None,
             correct: Some(true),
             magnitude: Some(135.0),
@@ -245,7 +314,7 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(1700.0),
             span: None,
             correct: Some(true),
             magnitude: Some(180.0),
@@ -253,7 +322,7 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             selected_option_id: None,
         },
         TrialPayload {
-            ms: None,
+            ms: Some(2000.0),
             span: None,
             correct: Some(false),
             magnitude: Some(90.0),
@@ -267,7 +336,8 @@ fn mental_rotation_scoring_uses_accuracy_and_mean_magnitude() {
             assert_eq!(metric, 0.6);
             assert_eq!(integer_metric_field(&metrics, "n_trials"), 5);
             assert_eq!(integer_metric_field(&metrics, "misses"), 2);
-            assert_eq!(metric_field(&metrics, "mean_magnitude"), 108.0);
+            assert_eq!(metric_field(&metrics, "mean_rt"), 1400.0);
+            assert!(metrics.get("mean_magnitude").is_none());
         }
         ScoreOutcome::Invalid { reason } => panic!("unexpected invalid score: {reason}"),
     }
