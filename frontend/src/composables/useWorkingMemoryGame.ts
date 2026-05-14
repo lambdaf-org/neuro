@@ -277,6 +277,7 @@ export function useWorkingMemoryGame(options: UseWorkingMemoryGameOptions) {
     canStart,
     isSubmitting: session.isSubmitting,
     errorMessage: session.errorMessage,
+    isBanned: session.isBanned,
     startGame,
     resetGame,
     finishGame,
