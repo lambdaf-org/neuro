@@ -32,7 +32,9 @@ use crate::models::game::FinalizeSessionResultRes;
 use crate::models::game::GameMetadata;
 use crate::models::game::PlayerStats;
 use crate::models::game::{
-    CreateGameEventReq, GameEvent, GameEventAck, GameEventWsAck, GameEventWsError};
+    CreateGameEventReq, GameEvent, GameEventAck, GameEventWsAck, GameEventWsAnticheat,
+    GameEventWsError,
+};
 use crate::models::game::{FinalizeSessionReq, GameSession, LeaderboardEntry};
 use crate::models::user::{LoginPayload, LoginRes, RegisterPayload};
 use actix_web::App;
@@ -118,6 +120,7 @@ async fn main() -> std::io::Result<()> {
             GameEvent,
             GameEventAck,
             GameEventWsAck,
+            GameEventWsAnticheat,
             GameEventWsError,
         )),
         security(("Authorization" = [])),

@@ -34,4 +34,96 @@
 //   P-001, P-002, R-001, R-002          -> ban immediately
 //   X-001 once                          -> flag + drop that trial
 //   X-001 twice                         -> ban
+//
+// Per-round evaluation: this service is invoked from the events WebSocket
+// after every round. `prior_event_ms` carries the reaction times stored for
+// previous rounds in this session; `new_event_ms` is the round just received.
 
+use crate::models::anticheat::{AnticheatAction, AnticheatFlag, AnticheatVerdict};
+
+const SUPERHUMAN_REACTION_MS: f64 = 150.0;
+const IMPOSSIBLY_FAST_MS: f64 = 80.0;
+const MIN_TRIALS_FOR_VARIANCE: usize = 10;
+const MIN_VARIANCE_STDDEV_MS: f64 = 5.0;
+
+pub fn evaluate_round(
+    _game_code: &str,
+    prior_event_ms: &[f64],
+    new_event_ms: f64,
+) -> AnticheatVerdict {
+    let mut flags: Vec<AnticheatFlag> = Vec::new();
+    let mut force_ban = false;
+
+    let valid = new_event_ms.is_finite() && new_event_ms >= 0.0;
+
+    if valid && new_event_ms < IMPOSSIBLY_FAST_MS {
+        // Below physiological floor — script-fast, ban on the spot.
+        flags.push(AnticheatFlag {
+            code: "T-001",
+            reason: format!(
+                "reaction {new_event_ms:.0}ms below physiological floor {IMPOSSIBLY_FAST_MS:.0}ms"
+            ),
+        });
+        force_ban = true;
+    } else if valid && new_event_ms < SUPERHUMAN_REACTION_MS {
+        let prior_superfast = prior_event_ms
+            .iter()
+            .filter(|m| m.is_finite() && **m < SUPERHUMAN_REACTION_MS)
+            .count();
+        if prior_superfast >= 1 {
+            flags.push(AnticheatFlag {
+                code: "T-001",
+                reason: format!(
+                    "{} reactions below {SUPERHUMAN_REACTION_MS:.0}ms in this session",
+                    prior_superfast + 1
+                ),
+            });
+            force_ban = true;
+        } else {
+            flags.push(AnticheatFlag {
+                code: "T-001",
+                reason: format!("reaction {new_event_ms:.0}ms below {SUPERHUMAN_REACTION_MS:.0}ms"),
+            });
+        }
+    }
+
+    let all_events: Vec<f64> = prior_event_ms
+        .iter()
+        .copied()
+        .filter(|m| m.is_finite() && *m >= 0.0)
+        .chain(if valid { Some(new_event_ms) } else { None })
+        .collect();
+
+    if all_events.len() >= MIN_TRIALS_FOR_VARIANCE {
+        let stddev = std_dev(&all_events);
+        if stddev < MIN_VARIANCE_STDDEV_MS {
+            flags.push(AnticheatFlag {
+                code: "V-001",
+                reason: format!(
+                    "reaction std_dev {stddev:.2}ms over {} trials",
+                    all_events.len()
+                ),
+            });
+        }
+    }
+
+    let action = if force_ban || flags.len() >= 2 {
+        AnticheatAction::Ban
+    } else if !flags.is_empty() {
+        AnticheatAction::Flag
+    } else {
+        AnticheatAction::Allow
+    };
+
+    AnticheatVerdict { action, flags }
+}
+
+fn std_dev(values: &[f64]) -> f64 {
+    if values.len() < 2 {
+        return 0.0;
+    }
+    let n = values.len() as f64;
+    let mean = values.iter().sum::<f64>() / n;
+    let variance = values.iter().map(|v| (v - mean).powi(2)).sum::<f64>() / n;
+    variance.sqrt()
+}

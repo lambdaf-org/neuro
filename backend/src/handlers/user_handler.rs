@@ -4,6 +4,7 @@ use crate::models::user::LoginPayload;
 use crate::models::user::LoginRes;
 use crate::models::user::RegisterPayload;
 use crate::models::validate::Validate;
+use crate::repositories::anticheat_repository;
 use actix_web::HttpResponse;
 use actix_web::web;
 use log::error;
@@ -119,9 +120,14 @@ pub async fn login(body: web::Json<LoginPayload>, state: web::Data<AppState>) ->
             }
         }
     };
+    let is_banned = anticheat_repository::is_user_banned(&state.sb_client, session.user.id)
+        .await
+        .unwrap_or(false);
+
     HttpResponse::Ok().json(LoginRes {
         user_id: session.user.id,
         email: body.email.clone(),
         access_token: session.access_token,
+        is_banned,
     })
 }
