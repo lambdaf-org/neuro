@@ -70,6 +70,8 @@ pub struct CreateGameEventReq {
     pub round: i32,
     pub event_value: f64,
     pub client_ts: String,
+    #[serde(default)]
+    pub correct: Option<bool>,
 }
 
 #[derive(Serialize, ToSchema)]
