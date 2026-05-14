@@ -230,7 +230,12 @@ export function useGameSession() {
         errorMessage.value = message
       }
     } finally {
-      if (!isStale(version)) isSubmitting.value = false
+      if (!isStale(version)) {
+        isSubmitting.value = false
+        // Session is finalized no more rounds will be sent. Close the WS so
+        // we don't leave an idle connection alive on the finished screen.
+        closeSocket()
+      }
     }
   }
 
