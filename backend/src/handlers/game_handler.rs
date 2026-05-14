@@ -6,16 +6,22 @@ use futures_util::StreamExt;
 use serde_json::json;
 use uuid::Uuid;
 
+use crate::models::anticheat::AnticheatVerdict;
 use crate::models::app_state::AppState;
 use crate::models::game::CreateGameEventReq;
 use crate::models::game::FinalizeSessionReq;
 use crate::models::game::FinalizeSessionResultRes;
 use crate::models::game::GameEventAck;
 use crate::models::game::GameEventWsAck;
+use crate::models::game::GameEventWsAnticheat;
 use crate::models::game::GameEventWsError;
 use crate::models::user::MiddlewareData;
 use crate::models::validate::Validate;
+use crate::repositories::anticheat_repository;
 use crate::repositories::game_repository;
+use crate::services::anticheat;
+use crate::services::anticheat::EventTuple;
+use crate::services::anticheat_runtime;
 use crate::services::scoring::{SCORING_VERSION, ScoreOutcome, score_game};
 use crate::services::scoring_input::{self, TrialResolutionError};
 
@@ -39,12 +45,25 @@ pub async fn start_game(
     ext_data: web::ReqData<MiddlewareData>,
     state: web::Data<AppState>,
 ) -> HttpResponse {
+    match anticheat_repository::is_user_banned(&state.sb_client, ext_data.user_id).await {
+        Ok(true) => return banned_response(),
+        Ok(false) => {}
+        Err(e) => return e.to_response(),
+    }
+
     match game_repository::create_session(&state.sb_client, ext_data.user_id, code.into_inner())
         .await
     {
         Ok(id) => HttpResponse::Created().json(json!({"id": id})),
         Err(e) => e.to_response(),
     }
+}
+
+fn banned_response() -> HttpResponse {
+    HttpResponse::Forbidden().json(json!({
+        "error": "banned",
+        "message": "Account suspended due to anti-cheat violation.",
+    }))
 }
 
 #[utoipa::path(
@@ -366,8 +385,10 @@ pub async fn stream_game_events(
     let (response, mut ws_session, mut msg_stream) = actix_ws::handle(&req, body)?;
     let user_id = ext_data.user_id;
     let app_state = state.clone();
+    let game_code = session.game_code.clone();
 
     actix_web::rt::spawn(async move {
+        let mut history: Vec<EventTuple> = Vec::new();
         while let Some(item) = msg_stream.next().await {
             let message = match item {
                 Ok(message) => message,
@@ -384,6 +405,8 @@ pub async fn stream_game_events(
                 &app_state,
                 session_id,
                 user_id,
+                &game_code,
+                &mut history,
             )
             .await;
 
@@ -402,11 +425,15 @@ async fn handle_game_event_ws_message(
     state: &web::Data<AppState>,
     session_id: Uuid,
     user_id: Uuid,
+    game_code: &str,
+    history: &mut Vec<EventTuple>,
 ) -> bool {
     match message {
         actix_ws::Message::Text(text) => {
-            handle_game_event_ws_text(ws_session, state, session_id, user_id, &text).await;
-            true
+            handle_game_event_ws_text(
+                ws_session, state, session_id, user_id, game_code, history, &text,
+            )
+            .await
         }
         actix_ws::Message::Ping(bytes) => {
             let _ = ws_session.pong(&bytes).await;
@@ -429,20 +456,59 @@ async fn handle_game_event_ws_text(
     state: &web::Data<AppState>,
     session_id: Uuid,
     user_id: Uuid,
+    game_code: &str,
+    history: &mut Vec<EventTuple>,
     text: &str,
-) {
+) -> bool {
     let event = match parse_game_event_ws_payload(text) {
         Ok(event) => event,
         Err(error) => {
             send_game_event_ws_error(ws_session, &error).await;
-            return;
+            return true;
         }
     };
 
     match persist_game_event(state, session_id, user_id, &event).await {
         Ok(stored_event) => send_game_event_ws_ack(ws_session, stored_event).await,
-        Err(error) => send_game_event_ws_error(ws_session, &error.to_string()).await,
+        Err(error) => {
+            send_game_event_ws_error(ws_session, &error.to_string()).await;
+            return true;
+        }
     }
+
+    let new_event: EventTuple = (event.event_value, event.correct);
+    let verdict = anticheat::evaluate_round(game_code, history, new_event);
+    history.push(new_event);
+
+    if verdict.flags.is_empty() {
+        return true;
+    }
+
+    if let Err(e) =
+        anticheat_runtime::apply_verdict(state, user_id, Some(session_id), &verdict).await
+    {
+        log::error!("apply_verdict failed: {e}");
+    }
+
+    send_anticheat_frame(ws_session, &verdict).await;
+
+    if verdict.is_ban() {
+        anticheat_runtime::invalidate_session_for_ban(state, session_id, &verdict).await;
+        let _ = ws_session.clone().close(None).await;
+        return false;
+    }
+
+    true
+}
+
+async fn send_anticheat_frame(ws_session: &mut actix_ws::Session, verdict: &AnticheatVerdict) {
+    let payload = json!(GameEventWsAnticheat {
+        message_type: String::from("anticheat"),
+        action: verdict.action.as_str().to_string(),
+        flags: verdict.flags_summary(),
+    })
+    .to_string();
+    let _ = ws_session.text(payload).await;
 }
 
 fn parse_game_event_ws_payload(text: &str) -> std::result::Result<CreateGameEventReq, String> {
