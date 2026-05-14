@@ -1,6 +1,28 @@
 import { ApiError, parseJsonBody, request } from '@/lib/auth/http'
 import type { GameResult } from '@/lib/play/result'
 
+const WS_BASE_URL = (() => {
+  const explicit = import.meta.env.VITE_WS_BASE_URL as string | undefined
+  if (explicit) return explicit.replace(/\/$/, '')
+
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/backend'
+  if (typeof window === 'undefined') return apiBase
+
+  const url = new URL(apiBase, window.location.origin)
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+  return url.toString().replace(/\/$/, '')
+})()
+
+export interface AnticheatVerdictFrame {
+  action: 'flag' | 'ban'
+  flags: Array<{ code: string; reason: string }>
+}
+
+export function openGameEventsSocket(sessionId: string, accessToken: string): WebSocket {
+  const url = `${WS_BASE_URL}/api/game/session/${encodeURIComponent(sessionId)}/events/ws?token=${encodeURIComponent(accessToken)}`
+  return new WebSocket(url)
+}
+
 interface StartSessionResponse {
   id: string
 }

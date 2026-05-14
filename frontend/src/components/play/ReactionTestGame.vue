@@ -19,6 +19,7 @@ const {
   canStart,
   isSubmitting,
   errorMessage,
+  isBanned,
   medianMs,
   startGame,
   resetGame,
@@ -115,7 +116,16 @@ function onZoneKeydown(event: KeyboardEvent): void {
 <template>
   <div class="w-full">
     <UAlert
-      v-if="errorMessage"
+      v-if="isBanned"
+      color="error"
+      variant="solid"
+      title="Account suspended"
+      :description="errorMessage || 'Your account was flagged by the anti-cheat system.'"
+      icon="i-lucide-shield-alert"
+      class="mb-4"
+    />
+    <UAlert
+      v-else-if="errorMessage"
       color="error"
       variant="soft"
       title="Error"
@@ -159,7 +169,7 @@ function onZoneKeydown(event: KeyboardEvent): void {
           color="secondary"
           size="lg"
           :loading="isBusy"
-          :disabled="!canStart"
+          :disabled="!canStart || isBanned"
           class="mt-2"
           @click.stop="startGame"
         >

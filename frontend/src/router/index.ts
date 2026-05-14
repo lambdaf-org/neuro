@@ -44,6 +44,11 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, requiresAdminUi: true },
   },
   {
+    path: '/banned',
+    name: 'banned',
+    component: () => import('@/pages/BannedPage.vue'),
+  },
+  {
     path: '/:pathMatch(.*)*',
     redirect: '/',
   },
