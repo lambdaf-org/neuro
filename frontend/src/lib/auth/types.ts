@@ -13,6 +13,7 @@ export interface LoginResponse {
   user_id: string
   email: string
   access_token: string
+  is_banned?: boolean
 }
 
 export interface StoredSession {

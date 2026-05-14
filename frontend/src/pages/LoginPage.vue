@@ -92,6 +92,12 @@ async function onSubmit(event: FormSubmitEvent<LoginFormState>) {
     auth.signIn(session)
     state.password = ''
 
+    if (session.is_banned) {
+      auth.flagBanned('Account suspended due to anti-cheat violation.')
+      await router.replace({ name: 'banned' })
+      return
+    }
+
     await router.push(resolveAuthRedirect(route.query.redirect))
   } catch (error) {
     if (error instanceof ApiError) {
