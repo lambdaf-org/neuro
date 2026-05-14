@@ -90,6 +90,13 @@ pub struct GameEventWsError {
     pub error: String,
 }
 
+#[derive(Serialize, ToSchema)]
+pub struct GameEventWsAnticheat {
+    pub message_type: String,
+    pub action: String,
+    pub flags: Value,
+}
+
 impl Validate for CreateGameEventReq {
     fn validate(&self) -> Result<(), Vec<&'static str>> {
         let mut errors = Vec::new();
