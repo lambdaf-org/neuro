@@ -27,6 +27,7 @@ export default defineConfig({
       '/backend': {
         target: process.env.VITE_BACKEND_ORIGIN || 'http://127.0.0.1:8080',
         changeOrigin: true,
+        ws: true,
         rewrite: (path) => path.replace(/^\/backend/, ''),
       },
     },

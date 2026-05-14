@@ -256,6 +256,7 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
     isBusy,
     canStart,
     errorMessage,
+    isBanned: session.isBanned,
     startGame,
     resetGame,
     selectOption,

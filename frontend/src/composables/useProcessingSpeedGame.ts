@@ -166,11 +166,10 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
 
     const responseMs =
       currentTrialStartedAt !== null ? Math.round(performance.now() - currentTrialStartedAt) : 0
+    const wasCorrect = isPresentAnswer === currentTrial.value.isMatchPresent
 
-    attempts.value.push({
-      wasCorrect: isPresentAnswer === currentTrial.value.isMatchPresent,
-      responseMs,
-    })
+    attempts.value.push({ wasCorrect, responseMs })
+    session.sendRoundEvent(attempts.value.length, responseMs, wasCorrect)
 
     nextTrial()
   }
@@ -227,6 +226,7 @@ export function useProcessingSpeedGame(options: UseProcessingSpeedGameOptions) {
     canStart,
     isSubmitting: session.isSubmitting,
     errorMessage: session.errorMessage,
+    isBanned: session.isBanned,
     startGame,
     resetGame,
     answerPresent: () => answer(true),
