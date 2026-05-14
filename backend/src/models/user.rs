@@ -61,4 +61,5 @@ pub struct LoginRes {
     pub user_id: Uuid,
     pub email: String,
     pub access_token: String,
+    pub is_banned: bool,
 }
