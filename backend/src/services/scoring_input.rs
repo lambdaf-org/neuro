@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use supabase_rs::SupabaseClient;
 
 use crate::errors::custom_errors::RepoError;
+use crate::models::assets::GameAssetRes;
 use crate::models::assets::playable_fluid_options;
+use crate::models::assets::playable_mental_rotation_options;
 use crate::models::game::TrialPayload;
 use crate::repositories::asset_repository;
 
@@ -22,6 +24,39 @@ impl From<RepoError> for TrialResolutionError {
 pub async fn build_pattern_logic_trials(
     db: &SupabaseClient,
     trials: &[TrialPayload],
+) -> Result<Vec<TrialPayload>, TrialResolutionError> {
+    build_asset_choice_trials(
+        db,
+        "gf",
+        trials,
+        playable_fluid_options,
+        "no playable Pattern Logic assets",
+    )
+    .await
+}
+
+pub async fn build_mental_rotation_trials(
+    db: &SupabaseClient,
+    trials: &[TrialPayload],
+) -> Result<Vec<TrialPayload>, TrialResolutionError> {
+    build_asset_choice_trials(
+        db,
+        "gv",
+        trials,
+        playable_mental_rotation_options,
+        "no playable Mental Rotation assets",
+    )
+    .await
+}
+
+type PlayableOptionsFn = for<'a> fn(&'a [GameAssetRes]) -> Option<Vec<&'a GameAssetRes>>;
+
+async fn build_asset_choice_trials(
+    db: &SupabaseClient,
+    game_code: &str,
+    trials: &[TrialPayload],
+    playable_options: PlayableOptionsFn,
+    no_playable_assets_error: &'static str,
 ) -> Result<Vec<TrialPayload>, TrialResolutionError> {
     let mut answers_by_puzzle = HashMap::new();
 
@@ -54,7 +89,7 @@ pub async fn build_pattern_logic_trials(
         }
     }
 
-    let groups = asset_repository::get_asset_groups_by_code(db, String::from("gf")).await?;
+    let groups = asset_repository::get_asset_groups_by_code(db, String::from(game_code)).await?;
     let group_ids: Vec<_> = groups.iter().map(|group| group.id).collect();
     let assets = asset_repository::get_game_assets_by_group_ids(db, &group_ids).await?;
     let mut assets_by_group = HashMap::new();
@@ -72,13 +107,13 @@ pub async fn build_pattern_logic_trials(
         let Some(assets) = assets_by_group.get(&group.id) else {
             continue;
         };
-        let Some(options) = playable_fluid_options(assets) else {
+        let Some(options) = playable_options(assets) else {
             continue;
         };
         let correct_option = options
             .iter()
             .find(|asset| asset.is_correct)
-            .expect("playable fluid options include exactly one correct option");
+            .expect("playable asset-choice options include exactly one correct option");
 
         let Some(answer) = answers_by_puzzle.get(&group.id) else {
             return Err(TrialResolutionError::BadRequest("missing puzzle answer"));
@@ -104,9 +139,7 @@ pub async fn build_pattern_logic_trials(
     }
 
     if scoring_trials.is_empty() {
-        return Err(TrialResolutionError::BadRequest(
-            "no playable Pattern Logic assets",
-        ));
+        return Err(TrialResolutionError::BadRequest(no_playable_assets_error));
     }
     if answers_by_puzzle.len() != scoring_trials.len() {
         return Err(TrialResolutionError::BadRequest("answer count mismatch"));

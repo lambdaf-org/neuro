@@ -5,6 +5,7 @@ use serde_json::json;
 use crate::models::app_state::AppState;
 use crate::models::assets::PublicAssetGroupRes;
 use crate::models::assets::is_playable_fluid_group;
+use crate::models::assets::is_playable_mental_rotation_group;
 use crate::models::assets::{
     CreateAssetGroupReq, CreateGameAssetReq, UpdateAssetGroupReq, UpdateGameAssetReq,
 };
@@ -100,7 +101,11 @@ pub async fn get_asset_groups_by_code(
 
     let public_groups: Vec<PublicAssetGroupRes> = asset_group
         .iter()
-        .filter(|group| game_code != "gf" || is_playable_fluid_group(group))
+        .filter(|group| match game_code.as_str() {
+            "gf" => is_playable_fluid_group(group),
+            "gv" => is_playable_mental_rotation_group(group),
+            _ => true,
+        })
         .map(PublicAssetGroupRes::from)
         .collect();
 

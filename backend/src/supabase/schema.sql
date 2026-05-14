@@ -146,7 +146,10 @@ WITH completed_sessions AS (
     FROM public.game_sessions gs
     JOIN public.profiles p ON p.id = gs.user_id
     JOIN public.game_metadata gm ON gm.game_code = gs.game_code
-    WHERE gs.status = 'completed' AND gs.metric_value IS NOT NULL AND gs.completed_at IS NOT NULL
+    WHERE gs.status = 'completed'
+      AND gs.metric_value IS NOT NULL
+      AND gs.completed_at IS NOT NULL
+      AND COALESCE(p.is_banned, FALSE) = FALSE
 )
 SELECT
     user_id,
@@ -178,7 +181,10 @@ SELECT
 FROM public.game_sessions gs
 JOIN public.profiles p ON p.id = gs.user_id
 JOIN public.game_metadata gm ON gm.game_code = gs.game_code
-WHERE gs.status = 'completed' AND gs.metric_value IS NOT NULL AND completed_at IS NOT NULL;
+WHERE gs.status = 'completed'
+  AND gs.metric_value IS NOT NULL
+  AND gs.completed_at IS NOT NULL
+  AND COALESCE(p.is_banned, FALSE) = FALSE;
 
 CREATE INDEX idx_sessions_leaderboard
     ON public.game_sessions(game_code, metric_value)

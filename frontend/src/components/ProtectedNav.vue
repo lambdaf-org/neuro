@@ -14,6 +14,16 @@ const email = computed(() => auth.session?.email ?? '')
 
 const items = computed<NavigationMenuItem[]>(() => [
   {
+    label: 'Play',
+    to: '/play',
+    active: route.path.startsWith('/play'),
+  },
+  {
+    label: 'Leaderboard',
+    to: '/leaderboard',
+    active: route.path.startsWith('/leaderboard'),
+  },
+  {
     label: 'Profile',
     to: '/profile',
     active: route.path.startsWith('/profile'),

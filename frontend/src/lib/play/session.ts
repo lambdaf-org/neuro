@@ -1,6 +1,28 @@
 import { ApiError, parseJsonBody, request } from '@/lib/auth/http'
 import type { GameResult } from '@/lib/play/result'
 
+const WS_BASE_URL = (() => {
+  const explicit = import.meta.env.VITE_WS_BASE_URL as string | undefined
+  if (explicit) return explicit.replace(/\/$/, '')
+
+  const apiBase = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/backend'
+  if (typeof window === 'undefined') return apiBase
+
+  const url = new URL(apiBase, window.location.origin)
+  url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
+  return url.toString().replace(/\/$/, '')
+})()
+
+export interface AnticheatVerdictFrame {
+  action: 'flag' | 'ban'
+  flags: Array<{ code: string; reason: string }>
+}
+
+export function openGameEventsSocket(sessionId: string, accessToken: string): WebSocket {
+  const url = `${WS_BASE_URL}/api/game/session/${encodeURIComponent(sessionId)}/events/ws?token=${encodeURIComponent(accessToken)}`
+  return new WebSocket(url)
+}
+
 interface StartSessionResponse {
   id: string
 }
@@ -10,6 +32,8 @@ export interface FluidIntelligenceAnswerSubmission {
   selected_option_id: number
   response_ms: number
 }
+
+export type MentalRotationAnswerSubmission = FluidIntelligenceAnswerSubmission
 
 export interface FinalizeSessionResult {
   status: string
@@ -25,6 +49,8 @@ export interface FluidIntelligenceSubmissionResult {
   incorrect_answers: number
   average_response_ms: number
 }
+
+export type MentalRotationSubmissionResult = FluidIntelligenceSubmissionResult
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -128,6 +154,33 @@ export async function submitFluidIntelligenceAnswers(
   answers: FluidIntelligenceAnswerSubmission[],
   accessToken: string,
 ): Promise<FluidIntelligenceSubmissionResult> {
+  return submitImageChoiceAnswers(
+    sessionId,
+    answers,
+    accessToken,
+    'Pattern Logic result was not scored.',
+  )
+}
+
+export async function submitMentalRotationAnswers(
+  sessionId: string,
+  answers: MentalRotationAnswerSubmission[],
+  accessToken: string,
+): Promise<MentalRotationSubmissionResult> {
+  return submitImageChoiceAnswers(
+    sessionId,
+    answers,
+    accessToken,
+    'Mental Rotation result was not scored.',
+  )
+}
+
+async function submitImageChoiceAnswers(
+  sessionId: string,
+  answers: FluidIntelligenceAnswerSubmission[],
+  accessToken: string,
+  unscoredMessage: string,
+): Promise<FluidIntelligenceSubmissionResult> {
   const result = await request<FinalizeSessionResult>(
     `/api/game/session/${encodeURIComponent(sessionId)}`,
     withAuthorization(accessToken, {
@@ -145,9 +198,7 @@ export async function submitFluidIntelligenceAnswers(
 
   if (result.status !== 'completed' || result.metric_value === null) {
     const reason =
-      typeof result.metrics.reason === 'string'
-        ? result.metrics.reason
-        : 'Pattern Logic result was not scored.'
+      typeof result.metrics.reason === 'string' ? result.metrics.reason : unscoredMessage
     throw new ApiError(reason, 422)
   }
 

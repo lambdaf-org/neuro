@@ -4,17 +4,17 @@ import { useGameSession } from '@/composables/useGameSession'
 import { ApiError } from '@/lib/auth'
 import { getAssetGroupsByCode } from '@/lib/play/assets'
 import {
-  createFluidPuzzles,
-  summarizeFluidAnswers,
-  type FluidAnswer,
-  type FluidSummary,
-  type FluidPuzzle,
-} from '@/lib/play/fluidIntelligence'
-import { submitFluidIntelligenceAnswers } from '@/lib/play/session'
+  createMentalRotationPuzzles,
+  summarizeMentalRotationAnswers,
+  type MentalRotationAnswer,
+  type MentalRotationPuzzle,
+  type MentalRotationSummary,
+} from '@/lib/play/mentalRotation'
+import { submitMentalRotationAnswers } from '@/lib/play/session'
 import { getErrorMessage } from '@/lib/utils/errorHandling'
 import { useAuthStore } from '@/stores/auth'
 
-export type FluidIntelligencePhase =
+export type MentalRotationPhase =
   | 'idle'
   | 'loading'
   | 'countdown'
@@ -24,20 +24,20 @@ export type FluidIntelligencePhase =
 
 const COUNTDOWN_SECONDS = 3
 
-interface UseFluidIntelligenceGameOptions {
+interface UseMentalRotationGameOptions {
   gameCode: MaybeRefOrGetter<string>
 }
 
-export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOptions) {
+export function useMentalRotationGame(options: UseMentalRotationGameOptions) {
   const auth = useAuthStore()
   const session = useGameSession()
 
-  const phase = ref<FluidIntelligencePhase>('idle')
+  const phase = ref<MentalRotationPhase>('idle')
   const countdownRemaining = ref(COUNTDOWN_SECONDS)
-  const puzzles = ref<FluidPuzzle[]>([])
+  const puzzles = ref<MentalRotationPuzzle[]>([])
   const currentIndex = ref(0)
-  const answers = ref<FluidAnswer[]>([])
-  const submittedSummary = ref<FluidSummary | null>(null)
+  const answers = ref<MentalRotationAnswer[]>([])
+  const submittedSummary = ref<MentalRotationSummary | null>(null)
   const localErrorMessage = ref('')
   const isLoadingAssets = ref(false)
   const isSubmittingAnswers = ref(false)
@@ -107,7 +107,7 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
 
     isSubmittingAnswers.value = true
     try {
-      const result = await submitFluidIntelligenceAnswers(
+      const result = await submitMentalRotationAnswers(
         sid,
         answers.value.map((answer) => ({
           puzzle_id: answer.puzzleId,
@@ -126,7 +126,7 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
       }
       localErrorMessage.value = ''
     } catch (error) {
-      localErrorMessage.value = getErrorMessage(error, 'Could not submit Pattern Logic result.')
+      localErrorMessage.value = getErrorMessage(error, 'Could not submit Mental Rotation result.')
     } finally {
       isSubmittingAnswers.value = false
       phase.value = 'finished'
@@ -188,9 +188,9 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
         return
       }
 
-      const loadedPuzzles = createFluidPuzzles(groups)
+      const loadedPuzzles = createMentalRotationPuzzles(groups)
       if (loadedPuzzles.length === 0) {
-        throw new ApiError('No playable Pattern Logic assets were found.', 500)
+        throw new ApiError('No playable Mental Rotation assets were found.', 500)
       }
 
       puzzles.value = loadedPuzzles
@@ -199,7 +199,7 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
         return
       }
 
-      localErrorMessage.value = getErrorMessage(error, 'Could not load Pattern Logic assets.')
+      localErrorMessage.value = getErrorMessage(error, 'Could not load Mental Rotation assets.')
       phase.value = 'idle'
       return
     } finally {
@@ -231,7 +231,9 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
   })
 
   const currentPuzzle = computed(() => puzzles.value[currentIndex.value] ?? null)
-  const summary = computed(() => submittedSummary.value ?? summarizeFluidAnswers(answers.value))
+  const summary = computed(
+    () => submittedSummary.value ?? summarizeMentalRotationAnswers(answers.value),
+  )
   const hasSubmittedResult = computed(() => submittedSummary.value !== null)
   const isBusy = computed(
     () => session.isBusy.value || isLoadingAssets.value || isSubmittingAnswers.value,
@@ -256,7 +258,6 @@ export function useFluidIntelligenceGame(options: UseFluidIntelligenceGameOption
     isBusy,
     canStart,
     errorMessage,
-    isBanned: session.isBanned,
     startGame,
     resetGame,
     selectOption,

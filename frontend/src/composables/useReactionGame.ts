@@ -160,6 +160,7 @@ export function useReactionGame(options: UseReactionGameOptions) {
 
       const round = currentRound.value
       roundResults.value.push({ round, reactionMs })
+      session.sendRoundEvent(round, reactionMs)
       phase.value = 'result'
       return
     }
@@ -273,6 +274,7 @@ export function useReactionGame(options: UseReactionGameOptions) {
     canStart,
     isSubmitting: session.isSubmitting,
     errorMessage: session.errorMessage,
+    isBanned: session.isBanned,
     lastResult: session.lastResult,
 
     // Derived

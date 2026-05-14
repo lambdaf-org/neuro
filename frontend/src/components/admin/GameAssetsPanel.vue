@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import type { FormError, FormSubmitEvent } from '@nuxt/ui'
 
+import AppEmptyState from '@/components/ui/AppEmptyState.vue'
+import AppErrorState from '@/components/ui/AppErrorState.vue'
+import AppLoadingState from '@/components/ui/AppLoadingState.vue'
 import type { AssetGroup, GameAsset } from '@/lib/admin/assets'
 import type { AssetFormState } from '@/composables/useAdminAssets'
 
@@ -30,7 +33,11 @@ defineProps<{
       <div>
         <h2 class="text-lg font-semibold text-highlighted">Game Assets</h2>
         <p class="text-sm text-toned">
-          {{ selectedGroup ? `Group: ${selectedGroup.label} (${selectedGroup.game_code})` : 'No group selected' }}
+          {{
+            selectedGroup
+              ? `Group: ${selectedGroup.label} (${selectedGroup.game_code})`
+              : 'No group selected'
+          }}
         </p>
       </div>
       <UButton
@@ -44,12 +51,12 @@ defineProps<{
       </UButton>
     </div>
 
-    <UAlert
+    <AppErrorState
       v-if="assetErrorMessage"
-      color="error"
-      variant="soft"
       title="Asset operation failed"
       :description="assetErrorMessage"
+      retry-label="Reload"
+      @retry="refreshAssets"
     />
 
     <UForm
@@ -64,7 +71,12 @@ defineProps<{
       </UFormField>
 
       <UFormField name="imageUrl" label="Image URL" required>
-        <UInput v-model="assetFormState.imageUrl" type="url" placeholder="https://.../image.svg" class="w-full" />
+        <UInput
+          v-model="assetFormState.imageUrl"
+          type="url"
+          placeholder="https://.../image.svg"
+          class="w-full"
+        />
       </UFormField>
 
       <UFormField name="isCorrect">
@@ -88,26 +100,19 @@ defineProps<{
     </UForm>
 
     <div v-if="selectedGroupId === null">
-      <UAlert
-        color="neutral"
-        variant="soft"
+      <AppEmptyState
+        icon="i-lucide-folder"
         title="No group selected"
         description="Select a group first to manage its assets."
       />
     </div>
 
     <div v-else class="space-y-2">
-      <UAlert
-        v-if="isAssetsLoading && assets.length === 0"
-        color="neutral"
-        variant="soft"
-        title="Loading assets..."
-      />
+      <AppLoadingState v-if="isAssetsLoading && assets.length === 0" variant="list" :count="4" />
 
-      <UAlert
+      <AppEmptyState
         v-else-if="assets.length === 0"
-        color="neutral"
-        variant="soft"
+        icon="i-lucide-image"
         title="No assets available"
         description="Create the first asset for this group."
       />
@@ -122,7 +127,13 @@ defineProps<{
             <div class="space-y-1">
               <p class="font-medium text-highlighted">
                 {{ asset.label }}
-                <UBadge v-if="asset.is_correct" color="success" variant="subtle" size="sm" class="ml-2">
+                <UBadge
+                  v-if="asset.is_correct"
+                  color="success"
+                  variant="subtle"
+                  size="sm"
+                  class="ml-2"
+                >
                   Correct
                 </UBadge>
               </p>
@@ -137,7 +148,9 @@ defineProps<{
             </div>
 
             <div class="flex flex-wrap gap-2">
-              <UButton size="xs" color="neutral" variant="outline" @click="startAssetEdit(asset)">Edit</UButton>
+              <UButton size="xs" color="neutral" variant="outline" @click="startAssetEdit(asset)">
+                Edit
+              </UButton>
               <UButton
                 size="xs"
                 color="error"

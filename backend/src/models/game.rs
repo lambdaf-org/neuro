@@ -70,6 +70,8 @@ pub struct CreateGameEventReq {
     pub round: i32,
     pub event_value: f64,
     pub client_ts: String,
+    #[serde(default)]
+    pub correct: Option<bool>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -88,6 +90,13 @@ pub struct GameEventWsAck {
 pub struct GameEventWsError {
     pub message_type: String,
     pub error: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct GameEventWsAnticheat {
+    pub message_type: String,
+    pub action: String,
+    pub flags: Value,
 }
 
 impl Validate for CreateGameEventReq {
