@@ -4,6 +4,7 @@ import { ApiError } from '@/lib/auth'
 import { GAME_RESULT_SCHEMA_VERSION, type GameResult } from '@/lib/play/result'
 
 import {
+  openGameEventsSocket,
   startGameSession,
   submitFluidIntelligenceAnswers,
   submitGameResult,
@@ -60,6 +61,25 @@ describe('startGameSession', () => {
         message: 'Unexpected game session response from server.',
         status: 500,
       }),
+    )
+  })
+})
+
+describe('openGameEventsSocket', () => {
+  it('opens the encoded session events WebSocket with the bearer token as query param', () => {
+    const WebSocketMock = vi.fn(function MockWebSocket(this: { url?: string }, url: string) {
+      this.url = url
+    })
+    vi.stubGlobal('WebSocket', WebSocketMock)
+
+    openGameEventsSocket('session 123/abc', 'token?with&chars')
+
+    const expectedBase = new URL('/backend', window.location.origin)
+    expectedBase.protocol = expectedBase.protocol === 'https:' ? 'wss:' : 'ws:'
+
+    expect(WebSocketMock).toHaveBeenCalledTimes(1)
+    expect(WebSocketMock).toHaveBeenCalledWith(
+      `${expectedBase.toString().replace(/\/$/, '')}/api/game/session/session%20123%2Fabc/events/ws?token=token%3Fwith%26chars`,
     )
   })
 })
