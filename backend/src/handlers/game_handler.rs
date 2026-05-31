@@ -9,8 +9,7 @@ use uuid::Uuid;
 use crate::models::anticheat::AnticheatVerdict;
 use crate::models::app_state::AppState;
 use crate::models::game::CreateGameEventReq;
-use crate::models::game::FinalizeSessionReq;
-use crate::models::game::FinalizeSessionResultRes;
+use crate::models::game::{FinalizeSessionReq, FinalizeSessionResultRes, TrialPayload};
 use crate::models::game::GameEventAck;
 use crate::models::game::GameEventWsAck;
 use crate::models::game::GameEventWsAnticheat;
@@ -127,38 +126,50 @@ pub async fn finalize_session(
         _ => body.trials.clone(),
     };
 
-    let (status, metric_value, metrics, scoring_version) = if !scoring_trials.is_empty() {
-        match score_game(&session.game_code, &scoring_trials) {
-            ScoreOutcome::Valid { metric, metrics } => {
-                ("completed", Some(metric), metrics, SCORING_VERSION)
-            }
-            ScoreOutcome::Invalid { reason } => {
-                ("invalid", None, json!({"reason": reason}), SCORING_VERSION)
-            }
-        }
-    } else {
-        ("completed", body.score, json!({}), 0)
-    };
-
-    let result = FinalizeSessionResultRes {
-        status: status.to_string(),
-        metric_value,
-        metrics: metrics.clone(),
-        scoring_version,
-    };
+    let result = build_finalize_session_result(&session.game_code, &body, &scoring_trials);
 
     match game_repository::finalize_session(
         &state.sb_client,
         session_id,
-        status,
-        metric_value,
-        metrics,
-        scoring_version,
+        &result.status,
+        result.metric_value,
+        result.metrics.clone(),
+        result.scoring_version,
     )
     .await
     {
         Ok(_) => HttpResponse::Ok().json(result),
         Err(e) => e.to_response(),
+    }
+}
+
+pub(crate) fn build_finalize_session_result(
+    game_code: &str,
+    body: &FinalizeSessionReq,
+    scoring_trials: &[TrialPayload],
+) -> FinalizeSessionResultRes {
+    if scoring_trials.is_empty() {
+        return FinalizeSessionResultRes {
+            status: String::from("completed"),
+            metric_value: body.score,
+            metrics: json!({}),
+            scoring_version: 0,
+        };
+    }
+
+    match score_game(game_code, scoring_trials) {
+        ScoreOutcome::Valid { metric, metrics } => FinalizeSessionResultRes {
+            status: String::from("completed"),
+            metric_value: Some(metric),
+            metrics,
+            scoring_version: SCORING_VERSION,
+        },
+        ScoreOutcome::Invalid { reason } => FinalizeSessionResultRes {
+            status: String::from("invalid"),
+            metric_value: None,
+            metrics: json!({"reason": reason}),
+            scoring_version: SCORING_VERSION,
+        },
     }
 }
 

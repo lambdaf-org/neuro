@@ -94,16 +94,12 @@ async fn auth_filter(
     req: ServiceRequest,
     next: Next<impl MessageBody>,
 ) -> Result<ServiceResponse<impl MessageBody>, actix_web::Error> {
-    let maybe_token = req
-        .headers()
-        .get("Authorization")
-        .and_then(|x| x.to_str().ok().map(|s| s.to_string()))
-        .or_else(|| {
-            req.query_string()
-                .split('&')
-                .find_map(|p| p.strip_prefix("token="))
-                .map(|s| format!("Bearer {}", s))
-        });
+    let maybe_token = middleware::extract_bearer_token(
+        req.headers()
+            .get("Authorization")
+            .and_then(|x| x.to_str().ok()),
+        req.query_string(),
+    );
 
     match middleware::validate_jwt(maybe_token).await {
         Ok(user_id) => {
