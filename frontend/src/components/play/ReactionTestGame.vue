@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 import { useReactionGame, type ReactionPhase } from '@/composables/useReactionGame'
 import type { GameMetadata } from '@/lib/play/metadata'
+import { PLAY_MODULE_ICONS } from '@/lib/play/modules'
 
 const props = defineProps<{
   gameCode: string
@@ -160,7 +161,7 @@ function onZoneKeydown(event: KeyboardEvent): void {
 
       <div v-if="phase === 'idle'" class="play-surface__content">
         <div class="play-surface__icon">
-          <UIcon name="i-lucide-mouse-pointer-click" class="h-8 w-8 text-secondary" />
+          <UIcon :name="PLAY_MODULE_ICONS['reaction-time']" class="h-8 w-8 text-secondary" />
         </div>
         <p class="play-surface__title">{{ displayName }}</p>
         <p class="play-surface__text">{{ taskSummary }} {{ totalRounds }} rounds.</p>
