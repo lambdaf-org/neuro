@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 import { useMentalRotationGame } from '@/composables/useMentalRotationGame'
 import type { GameMetadata } from '@/lib/play/metadata'
+import { PLAY_MODULE_ICONS } from '@/lib/play/modules'
 
 const props = defineProps<{
   gameCode: string
@@ -76,7 +77,7 @@ const resultStats = computed(() => [
 
       <div v-if="phase === 'idle'" class="play-surface__content">
         <div class="play-surface__icon">
-          <UIcon name="i-lucide-cuboid" class="h-8 w-8 text-secondary" />
+          <UIcon :name="PLAY_MODULE_ICONS['mental-rotation']" class="h-8 w-8 text-secondary" />
         </div>
         <p class="play-surface__title">{{ displayName }}</p>
         <p class="play-surface__text">{{ taskSummary }}</p>
