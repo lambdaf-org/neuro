@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 import { useWorkingMemoryGame } from '@/composables/useWorkingMemoryGame'
 import type { GameMetadata } from '@/lib/play/metadata'
+import { PLAY_MODULE_ICONS } from '@/lib/play/modules'
 
 const props = defineProps<{
   gameCode: string
@@ -120,7 +121,7 @@ function tileClass(tile: number): string {
 
       <div v-if="phase === 'idle'" class="play-surface__content">
         <div class="play-surface__icon">
-          <UIcon name="i-lucide-brain-circuit" class="h-8 w-8 text-secondary" />
+          <UIcon :name="PLAY_MODULE_ICONS['sequence-memory']" class="h-8 w-8 text-secondary" />
         </div>
         <p class="play-surface__title">{{ displayName }}</p>
         <p class="play-surface__text">{{ taskSummary }}</p>

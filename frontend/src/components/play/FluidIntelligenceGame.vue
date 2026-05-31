@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 
 import { useFluidIntelligenceGame } from '@/composables/useFluidIntelligenceGame'
 import type { GameMetadata } from '@/lib/play/metadata'
+import { PLAY_MODULE_ICONS } from '@/lib/play/modules'
 
 const props = defineProps<{
   gameCode: string
@@ -114,7 +115,7 @@ watch(phase, async (nextPhase) => {
 
       <div v-if="phase === 'idle'" class="play-surface__content">
         <div class="play-surface__icon">
-          <UIcon name="i-lucide-grid-3x3" class="h-8 w-8 text-secondary" />
+          <UIcon :name="PLAY_MODULE_ICONS['pattern-logic']" class="h-8 w-8 text-secondary" />
         </div>
         <p class="play-surface__title">{{ displayName }}</p>
         <p class="play-surface__text">{{ taskSummary }}</p>
