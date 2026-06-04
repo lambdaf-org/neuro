@@ -204,10 +204,7 @@ impl Scorer for MentalRotationScorer {
             };
         }
 
-        let right_count = valid_trials
-            .iter()
-            .filter(|(correct, _)| *correct)
-            .count();
+        let right_count = valid_trials.iter().filter(|(correct, _)| *correct).count();
         let misses = valid_trials.len().saturating_sub(right_count);
         let response_times = valid_trials
             .iter()

@@ -38,11 +38,19 @@ use crate::models::game::{
 use crate::models::game::{FinalizeSessionReq, GameSession, LeaderboardEntry};
 use crate::models::user::{LoginPayload, LoginRes, RegisterPayload};
 use actix_web::App;
+use actix_web::HttpResponse;
 use actix_web::HttpServer;
+use actix_web::dev::Service;
+use actix_web::http::Method;
+use actix_web::http::header;
+use actix_web::http::header::HeaderMap;
+use actix_web::http::header::HeaderValue;
 use actix_web::middleware::Logger;
 use actix_web::web;
 use dotenv::dotenv;
 use env_logger::Env;
+use futures_util::future::Either;
+use futures_util::future::ready;
 use log::info;
 use log::warn;
 use supabase_auth::models::AuthClient;
@@ -147,6 +155,22 @@ async fn main() -> std::io::Result<()> {
             .service(
                 SwaggerUi::new("/swagger/{_:.*}").url("/api-doc/openapi.json", openapi.clone()),
             )
+            .wrap_fn(|req, srv| {
+                if req.method() == Method::OPTIONS {
+                    let mut response = HttpResponse::NoContent().finish();
+                    add_cors_headers(response.headers_mut());
+                    return Either::Left(ready(Ok(
+                        req.into_response(response.map_into_right_body())
+                    )));
+                }
+
+                let fut = srv.call(req);
+                Either::Right(async move {
+                    let mut response = fut.await?.map_into_left_body();
+                    add_cors_headers(response.headers_mut());
+                    Ok(response)
+                })
+            })
             .wrap(Logger::default())
             .app_data(app_state.clone())
             .configure(global_routes::init_admin_scope)
@@ -156,6 +180,25 @@ async fn main() -> std::io::Result<()> {
     .bind(format!("{}:{}", address.0, address.1))?
     .run()
     .await
+}
+
+fn add_cors_headers(headers: &mut HeaderMap) {
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_ORIGIN,
+        HeaderValue::from_static("*"),
+    );
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_METHODS,
+        HeaderValue::from_static("GET, POST, PUT, PATCH, DELETE, OPTIONS"),
+    );
+    headers.insert(
+        header::ACCESS_CONTROL_ALLOW_HEADERS,
+        HeaderValue::from_static("Authorization, Content-Type, Accept"),
+    );
+    headers.insert(
+        header::ACCESS_CONTROL_MAX_AGE,
+        HeaderValue::from_static("86400"),
+    );
 }
 
 fn setup_address() -> (String, String) {
