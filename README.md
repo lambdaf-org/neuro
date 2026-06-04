@@ -149,12 +149,14 @@ VITE_ADMIN_UI=true
 For a deployed frontend, set the public backend origin explicitly:
 
 ```
-VITE_API_BASE_URL=https://your-backend.example.com
+VITE_API_BASE_URL=https://your-backend.up.railway.app
 ```
 
-The local `/backend` API base is only rewritten by the Vite development proxy. On Vercel,
-leaving `VITE_API_BASE_URL` unset makes browser calls go to the frontend deployment itself,
+The local `/backend` API base is only rewritten by the Vite development proxy. On Railway,
+leaving `VITE_API_BASE_URL` unset can make browser calls go to the frontend service itself,
 which can return `405 Method Not Allowed` for `/backend/login` and `/backend/register`.
+For the backend Railway service, set `HOST=0.0.0.0` if you are not using the Dockerfile.
+Railway supplies `PORT` automatically.
 
 ## Testing
 ```bash

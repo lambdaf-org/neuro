@@ -18,5 +18,7 @@ RUN apt-get update && apt-get install -y ca-certificates libssl3 && rm -rf /var/
 COPY --from=builder /app/target/release/backend /usr/local/bin/app
  
 EXPOSE 8080
+
+ENV HOST=0.0.0.0
  
 CMD ["app"]
