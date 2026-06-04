@@ -37,8 +37,10 @@ use crate::models::game::{
 };
 use crate::models::game::{FinalizeSessionReq, GameSession, LeaderboardEntry};
 use crate::models::user::{LoginPayload, LoginRes, RegisterPayload};
+use actix_cors::Cors;
 use actix_web::App;
 use actix_web::HttpServer;
+use actix_web::http::header;
 use actix_web::middleware::Logger;
 use actix_web::web;
 use dotenv::dotenv;
@@ -136,6 +138,7 @@ async fn main() -> std::io::Result<()> {
 
     dotenv().ok();
     let address = setup_address();
+    let allowed_origins = setup_cors_allowed_origins();
     info!("Running at http://{}:{}", address.0, address.1);
 
     // init the logger and define default log level
@@ -143,7 +146,16 @@ async fn main() -> std::io::Result<()> {
     let app_state = web::Data::new(init_app_state().await);
 
     HttpServer::new(move || {
+        let cors = allowed_origins.iter().fold(
+            Cors::default()
+                .allowed_methods(["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+                .allowed_headers([header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE])
+                .max_age(3600),
+            |cors, origin| cors.allowed_origin(origin),
+        );
+
         App::new()
+            .wrap(cors)
             .service(
                 SwaggerUi::new("/swagger/{_:.*}").url("/api-doc/openapi.json", openapi.clone()),
             )
@@ -170,6 +182,29 @@ fn setup_address() -> (String, String) {
     });
 
     (host, port)
+}
+
+fn setup_cors_allowed_origins() -> Vec<String> {
+    let origins = env::var("CORS_ALLOWED_ORIGINS")
+        .or_else(|_| env::var("FRONTEND_ORIGIN"))
+        .unwrap_or_else(|_| {
+            warn!("Could not find CORS_ALLOWED_ORIGINS env, defaulting to http://localhost:5173");
+            "http://localhost:5173".to_string()
+        });
+
+    let parsed_origins: Vec<String> = origins
+        .split(',')
+        .map(str::trim)
+        .filter(|origin| !origin.is_empty())
+        .map(str::to_string)
+        .collect();
+
+    if parsed_origins.is_empty() {
+        warn!("CORS_ALLOWED_ORIGINS is empty, defaulting to http://localhost:5173");
+        return vec!["http://localhost:5173".to_string()];
+    }
+
+    parsed_origins
 }
 
 async fn init_app_state() -> AppState {
