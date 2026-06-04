@@ -137,6 +137,7 @@ SUPABASE_API_KEY=your_supabase_api_key
 SUPABASE_ANON_KEY=your_supabase_anon_key
 HOST=127.0.0.1
 PORT=8080
+CORS_ALLOWED_ORIGINS=http://localhost:5173
 ADMIN_API_ENABLED=true
 ```
 
