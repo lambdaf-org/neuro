@@ -83,12 +83,18 @@ fn finalize_result_completes_valid_reaction_trials() {
     assert_eq!(result.status, "completed");
     assert_eq!(result.metric_value, Some(300.0));
     assert_eq!(result.scoring_version, SCORING_VERSION);
-    assert_eq!(result.metrics.get("n_valid").and_then(Value::as_i64), Some(3));
+    assert_eq!(
+        result.metrics.get("n_valid").and_then(Value::as_i64),
+        Some(3)
+    );
 }
 
 #[test]
 fn finalize_result_marks_invalid_when_scoring_rejects_trials() {
-    let request = finalize_req(vec![trial(Some(120.0), None), trial(Some(140.0), None)], None);
+    let request = finalize_req(
+        vec![trial(Some(120.0), None), trial(Some(140.0), None)],
+        None,
+    );
 
     let result = build_finalize_session_result("gt", &request, &request.trials);
 
