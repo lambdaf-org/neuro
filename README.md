@@ -1,135 +1,79 @@
 # Neuro
 
-**Neuro** is a web-based cognitive benchmarking platform that measures individual performance across five core domains of human cognition. Each test is modeled after established paradigms from cognitive psychology and psychometrics, and maps to a broad ability factor from the Cattell-Horn-Carroll (CHC) theory of intelligence, the most widely accepted hierarchical framework in differential psychology (McGrew, 2009).
+> Five short browser games that score five cognitive abilities, giving you a profile and not a single IQ number.
 
-The platform administers short, gamified tasks via a real-time WebSocket pipeline (Rust/Actix-Web backend, Vue 3 frontend) and records fine-grained performance metrics to a PostgreSQL database. Results can be compared across users via per-game leaderboards, enabling both individual self-assessment and normative comparison.
+![Rust](https://img.shields.io/badge/backend-Rust-CE412B)
+![Vue 3](https://img.shields.io/badge/frontend-Vue%203-42B883)
 
-Each game targets a single narrow ability so that the resulting score profile is interpretable. A user does not receive one IQ-like number but five orthogonal data points that together sketch a cognitive fingerprint.
+Neuro is a web-based cognitive benchmarking app. Each game targets one narrow ability from Cattell-Horn-Carroll (CHC) theory, so you get five orthogonal scores that sketch a cognitive fingerprint. A Rust/Actix-Web backend streams fine-grained per-round metrics over WebSockets into PostgreSQL, with per-game leaderboards and a live anti-cheat layer.
 
-## Cognitive Tests
+## The five games
 
-### Gt - Reaction Time
-
-| | |
-|---|---|
-| **CHC Factor** | Gt, Processing and Decision Speed |
-| **Domain** | Simple reaction time, psychomotor speed |
-| **Task** | A visual stimulus appears after a randomized foreperiod. The user responds as quickly as possible by clicking or tapping. Multiple trials are administered to reduce noise. |
-| **Metric** | Median reaction time in milliseconds (lower is better). Anticipatory responses below 150 ms and lapses above 1500 ms are excluded. |
-| **Basis** | Simple and choice reaction time tasks have been used since Galton (1883) and Donders (1869) to quantify neural signal transduction and motor-response latency. Reaction time correlates moderately with general intelligence (Jensen, 2006). |
-
-### Gwm - Sequence Memory
-
-| | |
-|---|---|
-| **CHC Factor** | Gwm, Short-Term and Working Memory |
-| **Domain** | Serial-order short-term memory span |
-| **Task** | The system highlights a sequence of positions in order. Sequence length starts short and grows by one after each correct recall. The user reproduces the sequence in exact order. The game ends on first failure. |
-| **Metric** | Maximum sequence length correctly recalled (higher is better). |
-| **Basis** | Digit-span and Corsi-block paradigms are gold-standard Gwm measures (Baddeley, 2003). Span at failure predicts fluid reasoning (Engle et al., 1999). |
-
-### Gs - Symbol Matching
-
-| | |
-|---|---|
-| **CHC Factor** | Gs, Processing Speed |
-| **Domain** | Perceptual speed, clerical speed and accuracy |
-| **Task** | A target symbol and a set of candidates are shown. The user identifies whether the target is present as quickly and accurately as possible within a fixed time window. |
-| **Metric** | Correct responses within the time limit (higher is better). |
-| **Basis** | Derived from the Digit Symbol and Symbol Search paradigms (Wechsler, 1997; Salthouse, 1996), loading on CHC Gs. These are among the most sensitive measures of cognitive aging. |
-
-### Gf - Pattern Logic
-
-| | |
-|---|---|
-| **CHC Factor** | Gf, Fluid Reasoning |
-| **Domain** | Inductive and figural reasoning |
-| **Task** | A visual pattern with a missing element is presented. The user selects the correct completion from four options. Each asset group provides one matrix image and four option images, one of which is correct. |
-| **Metric** | Accuracy as percent correct (higher is better). |
-| **Basis** | Matrix-reasoning tasks (Raven, 1938; Cattell, 1963) are the prototypical markers of fluid intelligence. Gf is the single best predictor of learning and novel problem-solving. |
-
-### Gv - Mental Rotation
-
-| | |
-|---|---|
-| **CHC Factor** | Gv, Visual-Spatial Processing |
-| **Domain** | Mental rotation, spatial visualization |
-| **Task** | A reference figure and four candidates are shown. Exactly one candidate is a rotated version of the reference. The others are mirror-images or distractors. The user selects the correct match. |
-| **Metric** | Accuracy as percent correct (higher is better), with optional per-item response time as a secondary metric. |
-| **Basis** | Mental rotation tasks (Shepard and Metzler, 1971) reveal an analog spatial transformation process. Spatial visualization loads on CHC Gv and predicts STEM aptitude (Wai et al., 2009). |
-
-### Summary
-
-| Code | Name | CHC | Domain | Primary Metric | Direction |
-|------|------|-----|--------|----------------|-----------|
+| Code | Game | CHC factor | Measures | Primary metric | Better |
+|------|------|------------|----------|----------------|--------|
 | `gt` | Reaction Time | Gt | Psychomotor speed | Median RT (ms) | Lower |
 | `gwm` | Sequence Memory | Gwm | Working memory span | Max sequence length | Higher |
 | `gs` | Symbol Matching | Gs | Processing speed | Correct per time window | Higher |
 | `gf` | Pattern Logic | Gf | Fluid reasoning | Accuracy (%) | Higher |
 | `gv` | Mental Rotation | Gv | Spatial visualization | Accuracy (%) | Higher |
 
+Each task is modeled on an established psychometric paradigm (simple reaction time, Corsi span, Digit Symbol, Raven matrices, Shepard-Metzler rotation). See the bottom of this file for citations.
+
+## Features
+
+- **Five orthogonal scores.** Every game isolates one narrow CHC ability, so the profile stays interpretable.
+- **Real-time pipeline.** Each round streams to the backend over an `actix-ws` WebSocket and lands in PostgreSQL.
+- **Per-game leaderboards.** Ranked by each game's primary metric, with direction handled automatically (lower RT wins, higher span wins).
+- **Live anti-cheat.** The server scores every round as it arrives and can flag or ban mid-session.
+- **Clean reaction-time data.** Scoring drops anticipatory responses below 150ms and lapses above 1500ms before computing median RT.
+- **JWT auth.** Register and login issue JWTs that gate the API and the WebSocket handshake (via header or `token=` query param).
+- **Admin asset CRUD.** Env-gated routes (`ADMIN_API_ENABLED`) manage the `gf` and `gv` image asset groups.
+
+## How anti-cheat works
+
+`backend/src/services/anticheat.rs` evaluates each round against rules grouped by timing, pattern, variance, rate, and temporal checks. The rules that are live today:
+
+- **T-001 (timing).** Reactions below 80ms are an instant ban. Below 150ms flags once and bans on a second occurrence in the session.
+- **V-001 (variance).** Reaction std-dev under 5ms across 10+ trials flags as too consistent to be human.
+- **P-001 (pattern, gs only).** 5+ correct Symbol Matching trials under 300ms bans, catching paced scripts that know the answer.
+
+Escalation: one flag logs and continues, two flags in a session ban, and hard rules ban immediately. See `ANTICHEAT_DEMOS.md` for console snippets that trigger each rule.
+
+## Tech stack
+
+- **Backend:** Rust, Actix-Web, Tokio, `actix-ws` (WebSockets), Supabase (PostgreSQL + Auth)
+- **Frontend:** Vue 3, TypeScript, Vite, Pinia, Vue Router, Tailwind CSS v4, Nuxt UI
+- **Tooling:** ESLint, OxLint, Prettier, Vitest
+
 ## Architecture
 
 <img src="assets/systems-diagram.png" alt="System Architecture Diagram" width="700">
 
-## Tech Stack
+## Quickstart
 
-- **Backend:** Rust, Actix-Web, Tokio, tokio-tungtenite (WebSockets), Supabase (PostgreSQL + Auth)
-- **Frontend:** Vue 3, TypeScript, Vite, Pinia
-- **Tooling:** ESLint, OxLint, Prettier, Vitest
-
-## Getting Started
-
-### Prerequisites
-
-- **Rust and Cargo** (latest stable version)
-- **Node.js** (v18 or higher)
-
-### Backend Setup
+Prerequisites: Rust + Cargo (stable), Node.js 20.19+ (or 22.12+), and a Supabase project (PostgreSQL + Auth).
 
 ```bash
-cd backend
-cargo run
+git clone https://github.com/lambdaf-org/neuro.git
+cd neuro
 ```
 
-### Database Reset
-To reset all tables, run the contents of `backend/src/supabase/schema.sql` in your Supabase dashboard under **SQL Editor > New Query**.
+### 1. Database
 
-### Seed Data
-1. Run `backend/src/supabase/schema.sql` in the Supabase SQL Editor to create the required database schema (including `game_metadata`).
-2. Run `backend/src/supabase/seed_game_assets.sql` in the Supabase SQL Editor. Replace `<project>` in the seed script with your Supabase project ID before running. This populates `game_metadata`, `asset_groups`, and `game_assets`. Safe to re-run as it clears existing data first.
+In the Supabase SQL Editor (**SQL Editor > New Query**):
 
-### Game Assets
-Assets are stored in a public Supabase Storage bucket called `game-assets`.
-```
-game-assets/
-├── gf/
-│   └── group_00..09/
-└── gv/
-    └── group_00..09/
-        ├── option_0.svg
-        ├── option_1.svg
-        ├── option_2.svg
-        ├── option_3.svg
-        └── reference.svg
-```
+1. Run `backend/src/supabase/schema.sql` to create the schema (tables, `game_metadata`, leaderboard view).
+2. Run `backend/src/supabase/seed_game_assets.sql` to populate `game_metadata`, `asset_groups`, and `game_assets`. Replace `<project>` with your Supabase project ID first. Safe to re-run (it clears existing data).
 
-Each group contains one prompt image and four options. For `gf` the prompt image is `matrix.svg`; for `gv` it is `reference.svg`. The public URL pattern is:
+Game images live in a public Supabase Storage bucket named `game-assets`, with `gf/` and `gv/` each holding `group_00..09`. URL pattern:
+
 ```
 https://<project>.supabase.co/storage/v1/object/public/game-assets/<game_code>/<group>/<file>
 ```
 
-### Frontend Setup
+### 2. Backend
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### Environment Variables
-
-Create a `.env` file in the `backend` directory with the following variables:
+Create `backend/.env`:
 
 ```
 SUPABASE_URL=your_supabase_url
@@ -140,38 +84,47 @@ PORT=8080
 ADMIN_API_ENABLED=true
 ```
 
-Create a `.env.local` file in the `frontend` directory with the following variable:
+```bash
+cd backend
+cargo run
+```
+
+### 3. Frontend
+
+Create `frontend/.env.local`:
 
 ```
 VITE_ADMIN_UI=true
 ```
 
-For a deployed frontend, set the public backend origin explicitly:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The Vite dev proxy forwards `/backend` to `http://127.0.0.1:8080`.
+
+## Testing
+
+```bash
+cd backend && cargo test     # Rust unit tests (anti-cheat, scoring, auth, sessions)
+cd frontend && npm run test:unit   # Vitest
+```
+
+## Deploying
+
+For a deployed frontend, set the public backend origin so browser calls reach the right service:
 
 ```
 VITE_API_BASE_URL=https://your-backend.up.railway.app
 ```
 
-The local `/backend` API base is only rewritten by the Vite development proxy. On Railway,
-leaving `VITE_API_BASE_URL` unset can make browser calls go to the frontend service itself,
-which can return `405 Method Not Allowed` for `/backend/login` and `/backend/register`.
-For the backend Railway service, set `HOST=0.0.0.0` if you are not using the Dockerfile.
-Railway supplies `PORT` automatically.
+Leaving `VITE_API_BASE_URL` unset on Railway can route `/backend/login` and `/backend/register` to the frontend service and return `405 Method Not Allowed`. For the backend Railway service, set `HOST=0.0.0.0` if you are not using the Dockerfile; Railway supplies `PORT` automatically.
 
-## Testing
-```bash
-cd backend
-cargo test
-```
+## Contributing
 
-## Current Status
-
-- Backend API scaffolded with Actix-Web REST endpoints
-- Admin CRUD routes with env-based toggle (`ADMIN_API_ENABLED`)
-- User authentication system implemented (register and login with JWT middleware)
-- Frontend initialized with Vue 3, TypeScript, and Vite scaffolding
-- WebSocket infrastructure for real-time communication
-- Anti-cheat worker system architecture
+Lambdaforge is open source and contributions are welcome. Start with the [contributor guide](https://github.com/lambdaf-org/contributing), and see the org-wide [CONTRIBUTING](https://github.com/lambdaf-org/.github/blob/main/CONTRIBUTING.md) and [Code of Conduct](https://github.com/lambdaf-org/.github/blob/main/CODE_OF_CONDUCT.md).
 
 ## References
 
@@ -186,3 +139,7 @@ cargo test
 - Shepard, R. N., and Metzler, J. (1971). Mental rotation of three-dimensional objects. *Science, 171*(3972), 701-703.
 - Wai, J., Lubinski, D., and Benbow, C. P. (2009). Spatial ability for STEM domains. *Journal of Educational Psychology, 101*(4), 817-835.
 - Wechsler, D. (1997). *WAIS-III Administration and Scoring Manual*. The Psychological Corporation.
+
+## License
+
+This repository does not yet include a `LICENSE` file, so default copyright applies for now. A license is coming soon. If you want to use or build on this before then, please open an issue.
